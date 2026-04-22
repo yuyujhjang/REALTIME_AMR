@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMR 도입 프로젝트 통합 대시보드</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ════════════════════════════════════════
+   RESET & BASE
+════════════════════════════════════════ */
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1565C0 100%);
+    padding: 10px;
+    min-height: 100vh;
+    color: #111827;
+}
+
+/* ════════════════════════════════════════
+   OUTER WRAPPER
+════════════════════════════════════════ */
+.main-wrapper {
+    max-width: 1900px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+}
+
+/* ════════════════════════════════════════
+   UNIFIED HEADER
+════════════════════════════════════════ */
+.unified-header {
+    background: linear-gradient(135deg, #0d1b4b 0%, #1e3c72 50%, #2a5298 100%);
+    color: white;
+    padding: 22px 30px;
+    text-align: center;
+    position: relative;
+}
+.unified-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; letter-spacing: 1px; }
+.unified-header .subtitle { font-size: 13px; opacity: 0.85; }
+.header-badge {
+    position: absolute; top: 20px; right: 30px;
+    background: linear-gradient(135deg, #00897B, #26A69A);
+    color: white; padding: 10px 20px; border-radius: 25px;
+    font-size: 13px; font-weight: bold;
+    border: 2px solid rgba(255,255,255,0.6);
+    box-shadow: 0 4px 15px rgba(0,137,123,0.5);
+    animation: headerPulse 2.5s infinite;
+}
+@keyframes headerPulse {
+    0%,100% { box-shadow: 0 4px 15px rgba(0,137,123,0.5); }
+    50%      { box-shadow: 0 4px 28px rgba(0,137,123,0.9); }
+}
+
+/* ════════════════════════════════════════
+   PAGE-LEVEL TABS
+════════════════════════════════════════ */
+.page-nav {
+    display: flex;
+    background: #1e3c72;
+    padding: 0 30px;
+    gap: 4px;
+}
+.page-tab {
+    padding: 14px 28px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: rgba(255,255,255,0.7);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+    letter-spacing: 0.3px;
+}
+.page-tab:hover { color: white; background: rgba(255,255,255,0.08); }
+.page-tab.active {
+    color: #7dd3fc;
+    border-bottom-color: #7dd3fc;
+    background: rgba(255,255,255,0.05);
+}
+
+/* ════════════════════════════════════════
+   PAGE SECTIONS
+════════════════════════════════════════ */
+.page-section { display: none; }
+.page-section.active { display: block; }
+
+/* ════════════════════════════════════════
+   ▶ TIMETABLE CSS
+════════════════════════════════════════ */
+.tl-progress-section {
+    padding: 15px 30px;
+    background: linear-gradient(135deg, #f0f4ff 0%, #dce8ff 100%);
+}
+.tl-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.tl-progress-title { font-size: 16px; font-weight: bold; color: #1e3c72; }
+.tl-progress-value { font-size: 26px; font-weight: bold; color: #1565C0; }
+.tl-progress-bar-container {
+    width: 100%; height: 30px; background: white;
+    border-radius: 15px; overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+.tl-progress-bar {
+    height: 100%; background: linear-gradient(90deg,#1565C0,#42A5F5);
+    border-radius: 15px; transition: width 1.5s ease-in-out;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 12px; color: white; font-weight: bold; font-size: 14px;
+}
+.tl-stats { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 10px; }
+.tl-stat-card {
+    background: white; padding: 8px 22px; border-radius: 8px;
+    text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 90px; cursor: pointer; transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+.tl-stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+.tl-stat-card.active { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.tl-stat-card .tl-label { font-size: 11px; color: #666; margin-bottom: 2px; }
+.tl-stat-card .tl-value { font-size: 16px; font-weight: bold; }
+.tl-stat-card.tl-completed { border-top: 3px solid #4caf50; }
+.tl-stat-card.tl-completed .tl-value { color: #4caf50; }
+.tl-stat-card.tl-completed.active { border-color: #4caf50; background: #e8f5e9; }
+.tl-stat-card.tl-in-progress { border-top: 3px solid #ff9800; }
+.tl-stat-card.tl-in-progress .tl-value { color: #ff9800; }
+.tl-stat-card.tl-in-progress.active { border-color: #ff9800; background: #fff3e0; }
+.tl-stat-card.tl-upcoming { border-top: 3px solid #1565C0; }
+.tl-stat-card.tl-upcoming .tl-value { color: #1565C0; }
+.tl-stat-card.tl-upcoming.active { border-color: #1565C0; background: #e3f2fd; }
+.tl-filter-hint { font-size: 10px; color: #999; margin-top: 5px; text-align: center; }
+
+.tl-schedule-section { padding: 20px 30px; background: white; }
+.tl-category-section { padding: 20px 30px; background: #f8faff; }
+.tl-history-section  { padding: 15px 30px 20px; background: white; }
+
+.tl-section-title {
+    font-size: 18px; font-weight: bold; color: #1e3c72;
+    margin-bottom: 15px; padding-bottom: 10px;
+    border-bottom: 3px solid #1565C0;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.tl-reset-filter {
+    font-size: 12px; color: #1565C0; cursor: pointer;
+    padding: 5px 12px; border: 1px solid #1565C0; border-radius: 12px;
+    background: white; display: none;
+}
+.tl-reset-filter:hover { background: #1565C0; color: white; }
+.tl-reset-filter.show { display: inline-block; }
+
+/* Timeline */
+.tl-timeline-container {
+    background: white; border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 15px 20px; overflow: visible;
+}
+.tl-timeline-header {
+    display: flex; margin-bottom: 8px; padding-left: 270px;
+    border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; padding-top: 5px;
+}
+.tl-month-label { flex:1; text-align:center; font-weight:bold; color:#1e3c72; font-size:12px; }
+.tl-timeline-row {
+    display: flex; align-items: center; margin-bottom: 2px;
+    position: relative; min-height: 26px; transition: all 0.3s ease;
+}
+.tl-timeline-row.hidden { display: none; }
+.tl-timeline-row.highlight { background: rgba(21,101,192,0.07); border-radius: 4px; }
+.tl-timeline-row.tl-group-header {
+    background: linear-gradient(90deg,#f0f4ff,#ffffff);
+    border-radius: 6px; margin-top: 6px; margin-bottom: 2px;
+    min-height: 22px; border-left: 4px solid var(--group-color);
+}
+.tl-timeline-label {
+    width: 270px; padding-right: 12px; font-size: 12px; font-weight: 500;
+    display: flex; align-items: center; flex-shrink: 0; color: #333;
+}
+.tl-num {
+    display: inline-flex; width:22px; height:22px; border-radius:50%; color:white;
+    align-items:center; justify-content:center; font-size:10px; font-weight:bold;
+    margin-right:8px; flex-shrink:0;
+}
+.tl-num.completed { background:#4caf50; }
+.tl-num.in_progress { background:#ff9800; }
+.tl-num.upcoming { background:#1565C0; }
+.tl-group-badge {
+    display:inline-block; font-size:10px; font-weight:bold;
+    padding:2px 8px; border-radius:10px; color:white;
+    background-color:var(--group-color); margin-right:6px; flex-shrink:0;
+}
+.tl-group-row-label { font-size:12px; font-weight:700; color:var(--group-color); flex:1; }
+.tl-chart {
+    flex:1; display:flex; position:relative; height:22px; overflow:visible;
+}
+.tl-bar-container {
+    position:absolute; height:100%; display:flex; align-items:center; z-index:5; overflow:visible;
+}
+.tl-bar {
+    height:18px; border-radius:9px; width:100%;
+    box-shadow:0 2px 4px rgba(0,0,0,0.2);
+    transition:transform 0.3s, box-shadow 0.3s, opacity 0.2s;
+    cursor:pointer; position:relative;
+}
+.tl-bar:hover { transform:translateY(-2px); box-shadow:0 4px 10px rgba(0,0,0,0.35); opacity:0.88; }
+.tl-bar.completed { background:linear-gradient(135deg,#4caf50,#66bb6a); }
+.tl-bar.in_progress { background:linear-gradient(135deg,#ff9800,#ffa726); }
+.tl-bar.upcoming { background:linear-gradient(135deg,#1565C0,#42A5F5); }
+.tl-bar-tooltip {
+    visibility:hidden; opacity:0;
+    position:absolute; bottom:calc(100% + 9px); left:50%; transform:translateX(-50%);
+    background:rgba(15,20,45,0.96); color:#fff; font-size:11px; font-weight:500;
+    padding:7px 14px; border-radius:8px; white-space:nowrap; z-index:200;
+    box-shadow:0 4px 16px rgba(0,0,0,0.4); pointer-events:none; transition:opacity 0.15s;
+    text-align:center; line-height:1.65;
+}
+.tl-bar-tooltip .tip-main   { font-size:12px; font-weight:700; color:#fff; display:block; }
+.tl-bar-tooltip .tip-period { font-size:10px; color:rgba(255,255,255,0.68); display:block; }
+.tl-bar-tooltip::after {
+    content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+    border:5px solid transparent; border-top-color:rgba(15,20,45,0.96);
+}
+.tl-bar:hover .tl-bar-tooltip { visibility:visible; opacity:1; }
+.tl-bar-container.tl-seg { padding-right:2px; }
+.tl-bar-container.tl-seg .tl-bar { border-radius:5px; }
+.tl-month-divider { position:absolute; width:1px; height:100%; background:#e0e0e0; top:0; }
+.tl-current-line {
+    position:absolute; width:2px; height:100%; background:#ff1744; top:0; z-index:10;
+    box-shadow:0 0 8px rgba(255,23,68,0.5);
+}
+.tl-current-label {
+    position:absolute; top:-32px; left:50%; transform:translateX(-50%);
+    background:#ff1744; color:white; padding:3px 9px; border-radius:12px;
+    font-size:10px; font-weight:bold; white-space:nowrap;
+    box-shadow:0 2px 8px rgba(255,23,68,0.3);
+}
+.tl-current-label::after {
+    content:''; position:absolute; bottom:-5px; left:50%; transform:translateX(-50%);
+    width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent;
+    border-top:5px solid #ff1744;
+}
+.tl-legend {
+    display:flex; justify-content:center; gap:25px;
+    margin-top:12px; padding:10px; background:#f5f7fa; border-radius:8px; flex-wrap:wrap;
+}
+.tl-legend-item { display:flex; align-items:center; gap:8px; font-size:12px; }
+.tl-legend-color { width:26px; height:13px; border-radius:6px; }
+.tl-lc-completed { background:linear-gradient(135deg,#4caf50,#66bb6a); }
+.tl-lc-progress  { background:linear-gradient(135deg,#ff9800,#ffa726); }
+.tl-lc-upcoming  { background:linear-gradient(135deg,#1565C0,#42A5F5); }
+
+/* Category cards */
+.tl-category-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; }
+.tl-cat-card {
+    background:white; border-radius:10px; padding:14px 16px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.08); border-left:5px solid var(--group-color);
+    transition:transform 0.2s,box-shadow 0.2s;
+}
+.tl-cat-card:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,0.12); }
+.tl-cat-title { font-size:13px; font-weight:bold; color:var(--group-color); margin-bottom:8px; }
+.tl-cat-items { font-size:11px; color:#555; line-height:1.7; }
+.tl-cat-period { font-size:11px; color:#888; margin-top:8px; border-top:1px solid #eee; padding-top:6px; }
+
+/* History */
+.tl-history-content { display:flex; flex-direction:column; gap:6px; }
+.tl-history-item {
+    background:#f0f4ff; padding:10px 14px; border-radius:6px;
+    font-size:12px; color:#333; border-left:4px solid #1565C0;
+}
+
+/* ── 일정 편집기 ── */
+.tl-editor-section { padding:20px 30px 10px; background:#f0f4ff; border-top:3px solid #1565C0; }
+.tl-editor-toggle {
+    display:flex; align-items:center; justify-content:space-between;
+    cursor:pointer; user-select:none;
+}
+.tl-editor-toggle h2 { font-size:17px; font-weight:700; color:#1e3c72; margin:0; }
+.tl-editor-toggle-icon {
+    display:flex; align-items:center; gap:8px;
+    font-size:12px; color:#1565C0; font-weight:600;
+}
+.tl-editor-toggle-icon .arrow {
+    display:inline-block; transition:transform 0.25s; font-size:14px;
+}
+.tl-editor-toggle-icon .arrow.open { transform:rotate(180deg); }
+
+.tl-editor-body { display:none; margin-top:16px; }
+.tl-editor-body.open { display:block; }
+
+.tl-editor-desc {
+    font-size:12px; color:#555; background:white; padding:10px 14px;
+    border-radius:8px; margin-bottom:14px; border-left:4px solid #ff9800;
+    line-height:1.7;
+}
+
+.tl-editor-group { margin-bottom:14px; border-radius:10px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.tl-editor-group-header {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 14px; color:white; font-size:13px; font-weight:700;
+}
+.tl-editor-group-header .dot { width:10px; height:10px; border-radius:50%; background:rgba(255,255,255,0.7); flex-shrink:0; }
+
+.tl-editor-table { width:100%; border-collapse:collapse; background:white; }
+.tl-editor-table thead tr { background:#f8faff; }
+.tl-editor-table th {
+    padding:8px 10px; text-align:left; font-size:11px; font-weight:700;
+    color:#555; border-bottom:2px solid #e8eeff; white-space:nowrap;
+}
+.tl-editor-table tbody tr { border-bottom:1px solid #f0f0f0; transition:background 0.15s; }
+.tl-editor-table tbody tr:hover { background:#f8faff; }
+.tl-editor-table tbody tr.tl-seg-row { background:#fafcff; }
+.tl-editor-table tbody tr.tl-seg-row:hover { background:#f0f5ff; }
+.tl-editor-table td { padding:7px 10px; font-size:12px; vertical-align:middle; }
+
+.tl-ed-no { width:34px; text-align:center; font-weight:700; color:#888; font-size:11px; }
+.tl-ed-name-cell { min-width:220px; }
+.tl-ed-name {
+    width:100%; border:1.5px solid #e0e0e0; border-radius:6px;
+    padding:5px 8px; font-size:12px; font-family:inherit; color:#222;
+    transition:border-color 0.2s; background:white;
+}
+.tl-ed-name:focus { outline:none; border-color:#1565C0; background:#f0f7ff; }
+.tl-ed-name.seg-tip { font-size:11px; color:#555; background:#f8faff; }
+
+.tl-ed-week-cell { width:120px; }
+.tl-ed-week {
+    width:100%; border:1.5px solid #e0e0e0; border-radius:6px;
+    padding:5px 6px; font-size:11px; font-family:inherit; color:#333;
+    background:white; cursor:pointer; transition:border-color 0.2s;
+}
+.tl-ed-week:focus { outline:none; border-color:#1565C0; }
+
+.tl-seg-label {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:10px; color:#888; font-weight:600; margin-left:20px;
+}
+.tl-seg-label::before { content:'↳'; color:#aaa; }
+
+.tl-ed-seg-toggle {
+    background:none; border:1.5px solid #ddd; border-radius:12px;
+    padding:2px 10px; font-size:10px; color:#666; cursor:pointer;
+    font-family:inherit; transition:all 0.2s; white-space:nowrap;
+}
+.tl-ed-seg-toggle:hover { border-color:#1565C0; color:#1565C0; background:#f0f7ff; }
+
+.tl-ed-seg-delete {
+    background:none; border:1.5px solid #ef4444; border-radius:6px;
+    padding:4px 10px; font-size:11px; color:#ef4444; cursor:pointer;
+    font-family:inherit; transition:all 0.2s; white-space:nowrap;
+}
+.tl-ed-seg-delete:hover { border-color:#dc2626; color:white; background:#dc2626; }
+
+.tl-ed-seg-remove {
+    background:none; border:1.5px solid #ef4444; border-radius:6px;
+    padding:4px 8px; font-size:13px; color:#ef4444; cursor:pointer;
+    font-family:inherit; transition:all 0.2s; white-space:nowrap;
+}
+.tl-ed-seg-remove:hover { border-color:#dc2626; color:white; background:#dc2626; }
+
+.tl-ed-item-delete {
+    background:none; border:1.5px solid #ef4444; border-radius:6px;
+    padding:4px 8px; font-size:13px; color:#ef4444; cursor:pointer;
+    font-family:inherit; transition:all 0.2s; white-space:nowrap;
+}
+.tl-ed-item-delete:hover { border-color:#dc2626; color:white; background:#dc2626; }
+
+.tl-editor-actions {
+    display:flex; gap:10px; padding:14px 0 6px; justify-content:flex-end; flex-wrap:wrap;
+}
+.tl-ed-btn {
+    padding:9px 20px; border:none; border-radius:8px; font-size:13px;
+    font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s;
+    display:flex; align-items:center; gap:6px;
+}
+.tl-ed-btn-apply {
+    background:linear-gradient(135deg,#1565C0,#42A5F5); color:white;
+    box-shadow:0 3px 10px rgba(21,101,192,0.35);
+}
+.tl-ed-btn-apply:hover { transform:translateY(-2px); box-shadow:0 5px 14px rgba(21,101,192,0.45); }
+.tl-ed-btn-reset {
+    background:white; color:#666; border:2px solid #ddd;
+}
+.tl-ed-btn-reset:hover { border-color:#ff5722; color:#ff5722; background:#fff5f2; }
+.tl-ed-saved-msg {
+    font-size:12px; color:#4caf50; font-weight:600;
+    opacity:0; transition:opacity 0.4s; align-self:center;
+}
+/* Group colors */
+.tl-gc-amr   { --group-color:#1565C0; }
+.tl-gc-sys   { --group-color:#6A1B9A; }
+.tl-gc-wrap  { --group-color:#E65100; }
+.tl-gc-door  { --group-color:#00695C; }
+.tl-gc-stab  { --group-color:#2E7D32; }
+.tl-gc-csv   { --group-color:#C62828; }
+.tl-gc-check { --group-color:#37474F; }
+
+/* ════════════════════════════════════════
+   ▶ CHECKLIST CSS
+════════════════════════════════════════ */
+:root {
+    --cl-primary:#2563eb; --cl-primary-dark:#1e40af; --cl-primary-light:#dbeafe;
+    --cl-success:#10b981; --cl-warning:#f59e0b; --cl-danger:#ef4444;
+    --cl-gray-50:#f9fafb; --cl-gray-100:#f3f4f6; --cl-gray-200:#e5e7eb;
+    --cl-gray-300:#d1d5db; --cl-gray-600:#4b5563; --cl-gray-700:#374151;
+    --cl-gray-800:#1f2937; --cl-gray-900:#111827;
+}
+.cl-section { background:#f8fafc; }
+.cl-section .cl-nav-tabs {
+    display:flex; background:white; border-bottom:2px solid var(--cl-gray-200);
+    padding:0 20px; gap:5px;
+}
+.cl-section .cl-nav-tab {
+    padding:14px 22px; background:transparent; border:none; cursor:pointer;
+    font-size:0.95em; font-weight:500; color:var(--cl-gray-600);
+    border-bottom:3px solid transparent; transition:all 0.3s;
+    font-family:inherit;
+}
+.cl-section .cl-nav-tab:hover { color:var(--cl-primary); background:var(--cl-primary-light); }
+.cl-section .cl-nav-tab.active { color:var(--cl-primary); border-bottom-color:var(--cl-primary); font-weight:600; }
+.cl-section .cl-tab-content { display:none; padding:28px 30px; animation:clFadeIn 0.35s ease-out; }
+.cl-section .cl-tab-content.active { display:block; }
+@keyframes clFadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.cl-section .cl-toolbar {
+    display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;
+}
+.cl-btn {
+    padding:10px 20px; border:none; border-radius:8px; cursor:pointer;
+    font-size:0.93em; font-weight:500; transition:all 0.3s;
+    display:inline-flex; align-items:center; gap:8px; font-family:inherit;
+}
+.cl-btn-primary { background:var(--cl-primary); color:white; }
+.cl-btn-primary:hover { background:var(--cl-primary-dark); transform:translateY(-2px); box-shadow:0 4px 12px rgba(37,99,235,0.4); }
+.cl-btn-secondary { background:var(--cl-gray-200); color:var(--cl-gray-700); }
+.cl-btn-secondary:hover { background:var(--cl-gray-300); }
+.cl-filter-group { display:flex; gap:10px; align-items:center; margin-left:auto; }
+.cl-filter-btn {
+    padding:8px 16px; border:2px solid var(--cl-gray-300); background:white;
+    border-radius:20px; cursor:pointer; font-size:0.88em; transition:all 0.3s; font-family:inherit;
+}
+.cl-filter-btn:hover { border-color:var(--cl-primary); color:var(--cl-primary); }
+.cl-filter-btn.active { background:var(--cl-primary); color:white; border-color:var(--cl-primary); }
+.cl-table {
+    width:100%; border-collapse:separate; border-spacing:0;
+    margin-top:20px; border:1px solid var(--cl-gray-200);
+    border-radius:8px; overflow:hidden;
+}
+.cl-table thead { background:var(--cl-gray-50); }
+.cl-table th {
+    padding:14px; text-align:left; font-weight:600; font-size:0.93em;
+    color:var(--cl-gray-700); border-bottom:2px solid var(--cl-gray-200);
+}
+.cl-table tbody tr { border-bottom:1px solid var(--cl-gray-200); transition:all 0.2s; }
+.cl-table tbody tr:hover { background:var(--cl-gray-50); }
+.cl-table tbody tr:last-child td { border-bottom:none; }
+.cl-table td { padding:14px; vertical-align:top; }
+.cl-category-cell {
+    background:var(--cl-primary-light); font-weight:600; color:var(--cl-primary-dark);
+    text-align:center; white-space:pre-line; border-right:3px solid var(--cl-primary);
+}
+.cl-editable {
+    min-height:28px; padding:7px; border-radius:4px; cursor:text;
+    transition:all 0.2s; white-space:pre-line;
+}
+.cl-editable:hover { background:var(--cl-gray-50); }
+.cl-editable:focus { outline:2px solid var(--cl-primary); background:white; }
+.cl-status-btns { display:flex; gap:5px; flex-wrap:wrap; }
+.cl-status-btn {
+    padding:5px 10px; border:2px solid var(--cl-gray-300); background:white;
+    border-radius:6px; cursor:pointer; font-size:0.82em; font-weight:500;
+    transition:all 0.3s; flex:1; min-width:64px; text-align:center; font-family:inherit;
+}
+.cl-status-btn:hover { transform:translateY(-1px); box-shadow:0 3px 6px rgba(0,0,0,0.1); }
+.cl-status-btn.active { font-weight:600; border-width:2px; }
+.cl-status-btn.not-started { border-color:#fecaca; color:#991b1b; }
+.cl-status-btn.not-started.active { background:#fee2e2; border-color:#dc2626; }
+.cl-status-btn.in-progress { border-color:#fed7aa; color:#92400e; }
+.cl-status-btn.in-progress.active { background:#ffedd5; border-color:#f97316; }
+.cl-status-btn.completed { border-color:#bbf7d0; color:#14532d; }
+.cl-status-btn.completed.active { background:#dcfce7; border-color:#16a34a; }
+.cl-progress-btns { display:flex; gap:4px; flex-wrap:wrap; }
+.cl-progress-btn {
+    padding:5px 9px; border:2px solid var(--cl-gray-300); background:white;
+    border-radius:6px; cursor:pointer; font-size:0.82em; font-weight:500;
+    transition:all 0.3s; flex:1; min-width:44px; text-align:center; font-family:'JetBrains Mono',monospace;
+}
+.cl-progress-btn:hover { transform:translateY(-1px); box-shadow:0 3px 6px rgba(0,0,0,0.1); }
+.cl-progress-btn.active { background:var(--cl-primary); color:white; border-color:var(--cl-primary); font-weight:600; }
+.cl-delete-btn {
+    background:var(--cl-danger); color:white; border:none;
+    padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85em;
+    transition:all 0.3s; font-family:inherit;
+}
+.cl-delete-btn:hover { background:#dc2626; transform:translateY(-1px); }
+
+/* Summary tab */
+.cl-summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:18px; margin-top:20px; }
+.cl-summary-card {
+    background:white; border:2px solid var(--cl-gray-200); border-radius:12px;
+    padding:22px; transition:all 0.3s;
+}
+.cl-summary-card:hover { transform:translateY(-4px); box-shadow:0 10px 30px rgba(0,0,0,0.1); border-color:var(--cl-primary); }
+.cl-summary-card h3 { font-size:1em; color:var(--cl-gray-700); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.cl-summary-card .cl-sv { font-size:2.3em; font-weight:700; color:var(--cl-primary); font-family:'JetBrains Mono',monospace; }
+.cl-overall-bar-wrap { background:var(--cl-gray-200); border-radius:10px; height:20px; overflow:hidden; margin-top:12px; }
+.cl-overall-bar {
+    background:var(--cl-primary); height:100%; border-radius:10px;
+    transition:width 0.6s ease-out; display:flex; align-items:center; justify-content:center;
+    color:white; font-size:0.72em; font-weight:600;
+}
+.cl-cat-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-top:28px; }
+.cl-cat-item { background:white; border:1px solid var(--cl-gray-200); border-radius:8px; padding:18px; }
+.cl-cat-item h4 { font-size:1em; margin-bottom:12px; color:var(--cl-gray-800); white-space:pre-line; }
+.cl-cat-item-bar-wrap { background:var(--cl-gray-200); border-radius:10px; height:16px; overflow:hidden; }
+.cl-cat-item-bar {
+    background:var(--cl-primary); height:100%; border-radius:10px;
+    transition:width 0.6s ease-out; display:flex; align-items:center; justify-content:center;
+    color:white; font-size:0.7em; font-weight:600;
+}
+.cl-cat-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; }
+.cl-stat { text-align:center; }
+.cl-stat-value { font-size:1.4em; font-weight:700; }
+.cl-stat-label { font-size:0.82em; color:var(--cl-gray-600); margin-top:4px; }
+
+/* Review tab */
+.cl-review-item { background:white; border:1px solid var(--cl-gray-200); border-radius:8px; padding:18px; margin-bottom:18px; }
+.cl-review-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; padding-bottom:12px; border-bottom:2px solid var(--cl-gray-200); }
+.cl-review-title { font-size:1.2em; font-weight:600; color:var(--cl-gray-800); }
+.cl-review-date { color:var(--cl-gray-600); font-size:0.92em; }
+.cl-review-content { display:grid; gap:14px; }
+.cl-review-field label { display:block; font-weight:600; color:var(--cl-gray-700); margin-bottom:6px; }
+
+/* Modal */
+.cl-modal {
+    display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;
+}
+.cl-modal.active { display:flex; }
+.cl-modal-content {
+    background:white; padding:28px; border-radius:12px; max-width:580px; width:90%;
+    max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);
+}
+.cl-modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; padding-bottom:12px; border-bottom:2px solid var(--cl-gray-200); }
+.cl-modal-header h3 { font-size:1.4em; color:var(--cl-gray-800); }
+.cl-close-btn { background:none; border:none; font-size:1.4em; cursor:pointer; color:var(--cl-gray-600); padding:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center; }
+.cl-close-btn:hover { color:var(--cl-gray-900); }
+.cl-form-group { margin-bottom:18px; }
+.cl-form-group label { display:block; margin-bottom:7px; font-weight:500; color:var(--cl-gray-700); }
+.cl-form-group input,
+.cl-form-group select,
+.cl-form-group textarea {
+    width:100%; padding:10px; border:2px solid var(--cl-gray-300);
+    border-radius:8px; font-family:inherit; font-size:0.97em;
+}
+.cl-form-group input:focus,
+.cl-form-group select:focus,
+.cl-form-group textarea:focus { outline:none; border-color:var(--cl-primary); }
+.cl-form-group textarea { resize:vertical; min-height:76px; }
+
+/* Toast */
+.cl-toast {
+    position:fixed; bottom:30px; right:30px; background:var(--cl-gray-800);
+    color:white; padding:13px 22px; border-radius:8px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.3); animation:clSlideUp 0.3s ease-out; z-index:2000;
+}
+@keyframes clSlideUp {
+    from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)}
+}
+input[type="file"] { display:none; }
+
+/* ════════════════════════════════════════
+   ▶ SCHEDULE TABLE CSS
+════════════════════════════════════════ */
+.sc-wrap { display:flex; flex-direction:column; gap:24px; }
+.sc-block {
+    background:white; border-radius:12px; overflow:hidden;
+    box-shadow:0 2px 12px rgba(0,0,0,0.09); border:1px solid var(--cl-gray-200);
+}
+.sc-block-head {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);
+    padding:13px 18px;
+}
+.sc-block-title-area { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
+.sc-block-icon { font-size:17px; flex-shrink:0; }
+.sc-title-input {
+    font-size:14px; font-weight:700; color:white; background:transparent;
+    border:none; outline:none; font-family:inherit; width:100%;
+    padding:3px 7px; border-radius:5px; transition:background 0.2s;
+}
+.sc-title-input:hover { background:rgba(255,255,255,0.13); }
+.sc-title-input:focus { background:rgba(255,255,255,0.2); outline:2px solid rgba(255,255,255,0.45); }
+.sc-head-btns { display:flex; gap:7px; flex-shrink:0; }
+.sc-hbtn {
+    background:rgba(255,255,255,0.15); color:white;
+    border:1.5px solid rgba(255,255,255,0.38);
+    border-radius:6px; padding:5px 12px; font-size:12px; font-weight:600;
+    cursor:pointer; font-family:inherit; transition:all 0.2s; white-space:nowrap;
+}
+.sc-hbtn:hover { background:rgba(255,255,255,0.3); }
+.sc-hbtn.del:hover { background:#ef4444; border-color:#ef4444; }
+.sc-tbl-wrap { overflow-x:auto; }
+.sc-tbl { width:100%; border-collapse:collapse; }
+.sc-tbl thead tr { background:#eef2ff; }
+.sc-tbl th {
+    padding:10px 14px; text-align:left; font-size:12px; font-weight:700;
+    color:#1e3c72; border-bottom:2px solid #d4ddf7; white-space:nowrap;
+}
+.sc-tbl th:nth-child(1) { width:28%; }
+.sc-tbl th:nth-child(2) { width:45%; }
+.sc-tbl th:nth-child(3) { width:22%; }
+.sc-tbl th:nth-child(4) { width:5%; min-width:36px; }
+.sc-tbl tbody tr { border-bottom:1px solid #f0f2f9; transition:background 0.12s; }
+.sc-tbl tbody tr:hover { background:#f7f9ff; }
+.sc-tbl tbody tr:last-child { border-bottom:none; }
+.sc-tbl td { padding:0; vertical-align:top; }
+.sc-cell {
+    display:block; min-height:38px; padding:9px 14px;
+    font-size:13px; color:#2d3748; font-family:inherit;
+    white-space:pre-wrap; word-break:break-word; line-height:1.55;
+    outline:none; transition:background 0.15s; cursor:text; overflow:visible;
+}
+.sc-cell:hover { background:#eff3ff; }
+.sc-cell:focus { background:#e3eaff; outline:2px solid #1565C0; outline-offset:-2px; }
+.sc-del-row {
+    display:flex; align-items:center; justify-content:center;
+    background:none; border:none; color:#d1d5db;
+    font-size:17px; cursor:pointer; padding:9px 8px; width:100%; min-height:38px;
+    transition:color 0.2s;
+}
+.sc-del-row:hover { color:#ef4444; }
+.sc-add-row-btn {
+    width:100%; padding:9px; background:#f8f9ff;
+    border:none; border-top:1.5px dashed #c7d2ee;
+    color:#1565C0; font-size:13px; font-weight:600; font-family:inherit;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px;
+    transition:all 0.2s;
+}
+.sc-add-row-btn:hover { background:#eef2ff; color:#0d47a1; }
+.sc-footer { display:flex; justify-content:center; padding:6px 0 2px; }
+.sc-add-block-btn {
+    background:linear-gradient(135deg,#1e3c72,#2a5298); color:white;
+    border:none; border-radius:24px; padding:13px 34px;
+    font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;
+    display:flex; align-items:center; gap:8px;
+    box-shadow:0 4px 16px rgba(21,60,114,0.32); transition:all 0.2s;
+}
+.sc-add-block-btn:hover { transform:translateY(-2px); box-shadow:0 7px 22px rgba(21,60,114,0.42); }
+.sc-empty { text-align:center; color:var(--cl-gray-600); padding:50px 20px; font-size:14px; }
+</style>
+
+<script>
+(function() {
+  var backup = {"version":"1.0","exportDate":"2026-04-21T03:06:19.454Z","checklist":[{"category":"AMR 연동","number":"1-1","item":"AMR 명령","problem":"AMR 분할 명령 가능 여부(창고 입고, 평치 적재 등)","solution":"분할명령 가능","note":"","status":"completed","progress":100},{"category":"AMR 연동","number":"1-2","item":"야간, 휴일 작동","problem":"AMR 야간 또는 휴일 사용 가능 여부(통신 여부)","solution":"내부망 사용 시 가능 (외부망 사용 시 불가)","note":"","status":"completed","progress":100},{"category":"ECS","number":"2-1","item":"시스템 사용법","problem":"현재 시스템과 동일 여부 (담당자가 ECS권한을 그대로 유지하는지)","solution":"사용법 기존방식 유지 예정","note":"","status":"completed","progress":100},{"category":"ECS","number":"2-2","item":"작업번호","problem":"작업번호 꼬임현상 (자율이동로봇로 입고 시 작업번호가 다 꼬여 입고될 우려)","solution":"추후 도입 시 테스트 일정 시기에 확인(두산솔루션 확인필요)","note":"","status":"in-progress","progress":25},{"category":"ECS","number":"2-3","item":"셀 자동검색","problem":"셀 자동검색 입고 (특정구역 과부하 시 해당 셀 구역을 제외한 분산입고 여부)","solution":"WMS와 연동 수정 필요(추후 ECS,WMS 담당자와 추가논의 필요)","note":"","status":"in-progress","progress":25},{"category":"ECS","number":"2-4","item":"입고대 화물인식","problem":"화물없음 인식 -> 스피드도어 완전히 닫힌 후 1~2초 뒤 화물없음으로 인식할 수 있게 요청","solution":"WMS와 연동 수정 필요(추후 ECS,WMS,엑스비스 담당자와 추가논의 필요)","note":"","status":"in-progress","progress":25},{"category":"MES","number":"3-1","item":"시험 접수","problem":"시험 미접수 시 입고처리 가능 여부","solution":"시험접수없이 입고처리 가능","note":"","status":"completed","progress":100},{"category":"MES","number":"3-2","item":"일련번호 확인","problem":"포장팀 일련번호 완료 전 물류팀 일련번호 확인 가능 여부","solution":"입고 완료 후 물류팀에서 전산 입고 수량과 일련번호 수량 일치 여부 확인 후 차수완료","note":"","status":"completed","progress":100},{"category":"MES","number":"3-3","item":"파렛트 회수 명령","problem":"자동창고 입고 파렛트 회수 명령","solution":"창고 입고 된 파렛트의 회수 명령 불가","note":"","status":"completed","progress":100},{"category":"MES","number":"3-4","item":"마지막 파렛트 처리","problem":"마지막 파렛트에 대한 처리방안","solution":"낱개 파렛트(마지막 파렛트) 처리는 포장실에서 자동래핑 가능하게 수동래핑 후 입고 처리 하기로 협의","note":"","status":"completed","progress":100},{"category":"MES","number":"3-5","item":"파렛트 정보","problem":"AMR의 파렛트 정보 확인","solution":"AMR 바코드 스캔 불가로 팔레트 적재정보 확인 불가, 자동래핑전 1회, 자동랩핑후 파렛트 정보 확인을 위해 바코드 스캔 진행 예정","note":"","status":"in-progress","progress":75},{"category":"WMS 연동","number":"4-1","item":"출고 지시 프로세스","problem":"WMS → AMR 작업 지시 흐름","note":"","status":"not-started","progress":0,"solution":""},{"category":"WMS 연동","number":"4-2","item":"Pallet ID 관리","problem":"Pallet ID 체계 표준화 필요","note":"","status":"in-progress","progress":50,"solution":"A.B.C 파렛트 관리 가능"},{"category":"WMS 연동","number":"4-3","item":"작업 대상 선택","problem":"출고 작업 시 AMR, 유인지게차 선택 여부","solution":"WMS 이동작업 명령 시 AMR 혹은 유인지게차 선택 팝업 활성화","note":"","status":"in-progress","progress":25},{"category":"WMS 연동","number":"4-4","item":"기준정보 설정","problem":"신제품 기준정보 설정 시 로직 연동 여부(MES, WMS 인터페이스 연동 여부)","solution":"가능하나 추가 확인 필요","note":"","status":"in-progress","progress":25},{"category":"WMS 연동","number":"4-5","item":"기준정보 설정","problem":"기준정보 설정책임 부서","solution":"물류팀에서 기준정보 설정","note":"","status":"in-progress","progress":50},{"category":"WMS 연동","number":"4-6","item":"입고 차수완료","problem":"차수완료 권한 (차수완료 미이행 시 ERP 재고차이 발생)","solution":"입고 완료 확인 후 일련번호 수량과 매칭 확인 후 차수 완료 진행 예정","note":"","status":"in-progress","progress":75},{"category":"WMS 연동","number":"4-7","item":"작업 로그","problem":"작업로그 확인 (통합관리로 인한 작업로그 누락 및 혼선 가능성)","solution":"ACS, WMS 로그 확인 가능","note":"","status":"in-progress","progress":25},{"category":"WMS 연동","number":"4-8","item":"입하 정보","problem":"Pallet 단위 입고 시 WMS 입하정보 입력 방식 (Pallet or Batch)","solution":"Pallet 단위","note":"","status":"completed","progress":100},{"category":"WMS 연동","number":"4-9","item":"유지 보수","problem":"WMS 유지보수 (메뉴 및 기능 추가 여부)","solution":"메뉴 및 기능 추가 예정","note":"","status":"in-progress","progress":25},{"category":"WMS 연동","number":"4-10","item":"제품 정보 라벨","problem":"WMS 제품정보라벨 부착 여부","solution":"포장실 수기 작성 대체","note":"","status":"completed","progress":100},{"category":"랩핑 프로세스\r\r\r\r\n자동화","number":"5-1","item":"자동 랩핑기 도입","problem":"현재 수동 랩핑으로 자동화 단절 및 AMR 대기시간 발생","solution":"낱개 파렛트 및 병포장 포장팀에서 수동랩핑 하기로 협의 완료","note":"","status":"completed","progress":100},{"category":"랩핑 프로세스\r\r\r\r\n자동화","number":"5-2","item":"AMR-랩핑기 연동","problem":"AMR과 랩핑기 간 통신 및 동기화 방안","solution":"연동 컨트롤 박스로 통신 가능","note":"","status":"completed","progress":100},{"category":"랩핑 프로세스\r\r\r\r\n자동화","number":"5-3","item":"랩핑 대기 스테이션","problem":"AMR 랩핑 대기 공간 부족으로 병목 발생 우려","solution":"입고 대기 공간 설정","note":"","status":"completed","progress":100},{"category":"랩핑 프로세스\r\r\r\r\n자동화","number":"5-4","item":"랩핑 위치","problem":"자동랩핑기 위치 변경 가능 여부 (AMR->랩핑기 안착 위치 변경 여부 포함)","solution":"위치 변경 가능, 측면 안착 가능","note":"","status":"completed","progress":100},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-1","item":"AMR 주행 경로","problem":"포장실 입고 대기→랩핑→입고 동선 최적화 필요","solution":"동선 협의 완료","note":"","status":"completed","progress":100},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-2","item":"충돌 방지 시스템","problem":"다중 AMR 운영 시 충돌 및 교착상태 가능성","note":"","status":"not-started","progress":0,"solution":""},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-3","item":"보행자 안전","problem":"작업자와 AMR 동선 교차로 인한 안전사고 위험","solution":"AMR의 주행속도, 긴급정지 등 안전기능 다수 존재","note":"","status":"completed","progress":100},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-4","item":"AMR 대기 공간","problem":" 랩핑기, 출고대 대기구역 미정의","solution":"추후 동선 및 각 구역 정의 예정(출고 대기 구역 미정의)","note":"","status":"in-progress","progress":50},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-5","item":"AMR 안전인증","problem":"AMR 장비 안전 적합 인증 여부 미확인","note":"","status":"in-progress","progress":50,"solution":"안전인증 진행 중"},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-6","item":"입출고 대기구역","problem":"입출고 대기구역 영상 확인 부분만 가능한지 여부","solution":"8대 영상 장치설치 예정, 추가 설치 필요 확인\n대당 3~4파렛트 가능 예정","note":"","status":"in-progress","progress":75},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-7","item":"동선 변경","problem":"자율이동로봇 동선 변경 가능 여부(입하장 동선 변경 필요, 저장공간 변경)","solution":"기존 구상 동선 변경 가능\n(동선 변경 시 학습 필요)","note":"","status":"in-progress","progress":50},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-8","item":"AMR 수동조작","problem":"AMR 수동조작 기능 여부","solution":"리모컨 조작 가능","note":"","status":"completed","progress":100},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-9","item":"2단 렉 사용","problem":"2단 렉에 적치 가능 여부","solution":"적치 가능하지만 위치기반시스템으로 적재여부 확인은 불가하여 2단 적재 불가 ","note":"","status":"completed","progress":100},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-10","item":"출고 ZONE","problem":"출고ZONE 설정 여부","solution":"원하는 Zone으로 이동 가능","note":"","status":"completed","progress":100},{"category":"물류 동선\r\r\r\r\n및 안전","number":"6-11","item":"ZONE 설정","problem":"입/출고 Zone의 공존이 가능 여부","solution":"공존 가능","note":"","status":"completed","progress":100},{"category":"시뮬레이션\r\r\r\r\n및 성능","number":"7-1","item":"AMR 이동 시간 측정","problem":"자동창고→출고대 이동 시간 데이터","note":"","status":"not-started","progress":0,"solution":""},{"category":"시뮬레이션\r\r\r\r\n및 성능","number":"7-2","item":"피크시간 대응","problem":"피크 시간대 AMR 교차작업 시 정체 우려","note":"","status":"not-started","progress":0,"solution":""},{"category":"시뮬레이션\r\r\r\r\n및 성능","number":"7-3","item":"출고대 배정 로직","problem":"출고대 빈공간 자동 배정 알고리즘 ","note":"","status":"not-started","progress":0},{"category":"장애 및\r\r\r\r\n예외 처리","number":"8-1","item":"수동 전환 프로세스","problem":"AMR, ASRS 장애 시 수동 운영 전환 절차","note":"","status":"not-started","progress":0,"solution":""},{"category":"장애 및\r\r\r\r\n예외 처리","number":"8-2","item":"Pallet ID 불일치 처리","problem":"시스템 간 데이터 불일치 발생 시 대응 방안","note":"","status":"not-started","progress":0,"solution":""},{"category":"장애 및\r\r\r\r\n예외 처리","number":"8-3","item":"원자재/완제품 동시 처리","problem":"원자재 출고와 완제품 출하 동시 진행 시 충돌","note":"","status":"not-started","progress":0},{"category":"장애 및\r\r\r\r\n예외 처리","number":"8-4","item":"Pallet 인식 시스템","problem":"Pallet 간격 및 감지 방식에 따른 인식 오류 가능성","note":"","status":"not-started","progress":0,"solution":""},{"category":"장애 및\r\r\r\r\n예외 처리","number":"8-5","item":"유지보수 체계","problem":"원격/현장 지원 방식 및 비용 구조","note":"","status":"in-progress","progress":50,"solution":"원격은 가능하나 IT 운영팀에서 외부망 열어 줘야 가능"},{"category":"장애 및\r\r\r\r\n예외 처리","number":"8-6","item":"바닥 안전라인","problem":"라인 도색 vs 가상지정 방식 결정 필요","note":"","status":"in-progress","progress":25,"solution":"라인 지정필요(레이저 장비 확인 중)"},{"category":"장애 및\r\r\r\r\n예외 처리","number":"8-7","item":"Pallet 규격 호환성","problem":"1000×1200 자동창고용, 기타 규격 평치 창고 혼용","solution":"현재 사용중인 파렛트 사이즈 사용 가능","note":"","status":"completed","progress":100},{"category":"장애 및\r\r\r\r\n예외 처리","number":"8-8","item":"예외 로직 커스터마이징","problem":"특수 상황 대응 로직 커스터마이징 가능성","note":"","status":"not-started","progress":0,"solution":""},{"category":"파렛트 검토","number":"9-1","item":"파렛트 적재 정보","problem":"Pallet 적재정보 혼재 가능성(기존 적재정보 구성된 Pallet로 구성할 시 차단 여부)","solution":"AMR 파렛트는 MES 시스템에서 입력한 파렛트 정보만 인식","note":"","status":"in-progress","progress":75},{"category":"파렛트 검토","number":"9-2","item":"파렛트 바코드","problem":"자사 외 Pallet 사용 시 바코드 스티커 부착위치","solution":"전후면 가운데 부착","note":"","status":"completed","progress":100},{"category":"파렛트 검토","number":"9-3","item":"파렛트 화물감지","problem":"자사 외 Pallet 사용 시 화물감지용 스티커라벨 부착 여부 (미부착 시 화물감지 인식 X)","solution":"자동창고 센서 방향 조정으로 자사 외 파렛트 인식 가능","note":"","status":"completed","progress":100},{"category":"파렛트 검토","number":"9-4","item":"1100사이즈 파렛트 처리","problem":"1100*1100 Pallet 지정 위치 적재 가능 여부","solution":"지정 위치 적재 가능하나 대기 존 과부하로 1100 파렛트는 1200파렛트로 적재 후 출하 시 1100파렛트로 이적하는 방향으로 논의 중","note":"","status":"in-progress","progress":75},{"category":"파렛트 검토","number":"9-5","item":"마지막 파렛트 처리","problem":"낱개 및 병 포장 적재 Pallet 의 랩핑 여부 (랩핑기 사용 불가)","solution":"포장실에서 수동 래핑 후 자동래핑기 사용 가능","note":"","status":"completed","progress":100},{"category":"파렛트 검토","number":"9-6","item":"파렛트 간격","problem":"평치위치 인식시스템 Pallet 간격","solution":"간격 10Cm 이상","note":"","status":"completed","progress":100}],"reviews":[{"title":"","datetime":"2026.02.25(목) 14:00~16:00","meetingName":"AMR·WMS시스템 연계 협의","participants":"액스비스, 두산솔루션, 유유제약(물류팀,IT운영팀,품질보증팀,공장관리팀)","purpose":"시스템 연계 요구사항 및 운영 기준 정리","notes":"","content":"1. 논의 배경\n\n물류 현장에 AMR(자율이동로봇) 도입을 검토함에 따라 WMS, MES, ACS 등 기존 시스템과의 연동 필요성.\n\nAMR 주행, 입출고 프로세스, 팔레트 관리, 배터리 운영 등 현장 운영 방식에 대한 사전 검토.\n\n실제 운영 환경에서 안전성, 시스템 인터페이스, 작업 흐름 정립을 위한 실무 협의를 진행함.\n\n2. 주요 합의사항\n\n① AMR 주행 및 안전\n\n    • AMR 주행속도, 긴급정지(EMO), 장애물 감지 등 안전 기능은 현장 상황에 맞게 설정 가능\n\n    • 주행 시 음성 안내, 경고음, 바닥 빔 표시 등 안전 장치 적용 검토\n\n    • AMR 동선 및 입하장·저장 공간 구조는 일부 조정 가능\n\n    • 자동 랩핑기 위치 및 AMR 정차 위치는 현장 조건에 따라 조정\n\n② 시스템 연동 및 데이터 관리\n\n   • AMR은 WMS, MES, ACS, 미들웨어와 연동하여 작업 명령 및 데이터 처리 수행\n\n   • 입고 및 재고 관리는 WMS 기준으로 팔레트 단위 일련번호 관리\n\n   • WMS 미등록 품목은 자동 입고 불가\n\n   • 팔레트 라벨 발행 및 코드별(A/B/C) 자동창고 관리 방식 적용\n\n   • 카메라 약 8대 설치 예정, 시야 확보 구간을 입·출고 Zone으로 설정\n\n   • ECS–WMS 간 화물 인식 인터페이스 지연 개선 필요\n\n   • 포장 공정 문제 발생 시 자동 출고 연동은 제한 (수동 처리 유지)\n\n   • 다품목 출고 시 AMR 또는 유인지게차 선택 운영 검토\n\n   • Wi-Fi 기반 운영 가능하나 외부망 사용은 제한\n\n   • ECS 작업번호 오류 등은 도입 테스트 기간 중 집중 점검 예정\n\n\n③ 배터리 및 장비 운영\n\n   • AMR 배터리 약 8시간 이상 운용 가능\n\n   • 배터리 잔량 30% 이하 시 충전 유도\n\n   • 자동 또는 수동 배터리 교체 방식 운영 가능\n\n   • 충전 장소 및 장비는 현장 공간 확인 후 추가 검토\n\n\n3. 기타 결정사항\n\n   • 외부 완제품 입고는 기존 수동 프로세스와 병행 운영\n\n   • 팔레트 최초 등록 시 자동창고 입출고 규칙 및 오류 방지 로직 적용\n\n   • 팔레트 라벨 인쇄 기능 추가 검토\n\n   • 세부 운영 기준 및 시스템 설정은 현장 운영 상황에 따라 추가 협의 예정\n\n핵심 요약\n\n   • AMR 도입을 위해 주행 안전, 시스템 연동, 팔레트 관리, 배터리 운영 등 주요 운영 기준을 검토함\n\n   • WMS/MES/ACS 연동 구조 및 입출고 데이터 관리 방식 논의\n\n   • 일부 시스템 인터페이스 및 운영 기준은 도입 테스트 기간 중 추가 검증 예정\n      "},{"title":"","datetime":"2026.04.10(금) 14:00~17:20","meetingName":"AMR 프로젝트 개요 및 주요 쟁점 확인","participants":"액스비스, 두산솔루션, 유유제약(물류팀,IT운영팀,공장관리팀,공장장님)","purpose":"AMR 도입 상황 설명 , 예측 가능한 문제점 질의 및 해결 방안 논의","notes":"","content":"1. 논의 배경\n  \n    • AMR 래핑 완료 후, 입고대 포화/설비 에러 등의 예외 상황에서 반환 팔레트 처리 및 재입고 절차\n\n    • 입고 수량 및 일련번호 완전성\n\n    • 원격 유지 보수\n\n    • 테스트 기간 일정 조율\n\n\n2. 주요 합의 사항\n\n① 입고대 포화 및 설비 에러 등의 상황 대처\n\n    • 자동 래핑 후 AMR의 자동 입고 시 입고대 포화 및 설비 에러에 따른 무한 입고 시도 문제\n\n    • ECS 입고 불가 사항을 계속적으로 AMR에 송신하는데 따른 과부하\n\n    • 원,자재 등 유인 지게차 이용 수동 입고 시 자동/수동 토글 이용하여 AMR 자동입고 상황 통제(개발 필요)\n\n    • 1안 : 입고 불가 시 AMR은 대기 존 까지의 작업 반복(포장실 -> 자동래핑), 입고대 문제 해결 시 사람이 개입하여 테블릿으로 작업 가능 상황 명령\n\n    • 2안 : 자동래핑 후 BCR(바코드 판독기) 이용 시 ECS 정보 확인, 알고리즘에 따라 입고 불가시 래핑단계까지 업무 진행, 입고 가능시 대기 중 파렛트 입고 진행\n\n    • 대기 상황의 장기화로 인한 기존 대기 존 이외의 별도 대기 장소 필요성\n\n\n② 실물 입고 수량과 일련번호 수량 일치 여부 및 자동래핑 가능 여부\n\n   • 포장 완료 된 파렛트 AMR 이용 자동 입고\n\n   • 모든 파렛트 입고 후 물류팀에서 입고 수량과 전산 일련번호 데이터 수량 일치 여부 확인 후 차수 완료 처리\n\n   • 모든 파렛트 자동 래핑 가능하게 포장실과 협의(불안정 파렛트 수동 래핑 작업 협의)\n\n   • 낱개 파렛트 대기 없이 자동 입고 결정\n\n\n③ 원격 유지 보수\n\n   • AMR 시스템 에러 발생 시 원격 문제 해결 가능 (단, IT팀에서 외부망 개방 시 가능)\n\n   • AMR 기계 에러 발생 시 방문 A/S 가능 \n\n   • 무상 유지 보수 기간은 1년   • 최종 설치 완료 후 액스비스 3주간 상주 \n\n④ 테스트 일정 조율\n\n   • 대기장소 위치 확립, 카메라 설치, 와이파이 망 설치 8월 이전 완료 예정\n\n   • 8월 공장 연휴기간 AMR테스트(단동 테스트)\n\n   • 연휴 다음 주 시스템 연동(ECS, WMS), 9월 첫 주까지 WMS, MES 테스트 완료 목표\n\n   • 9월 2주부터 실무 확인 테스트\n\n   • CSV(애거슨), IT운영팀과 협의 하여 테스트 일정 조율 \n\n\n\n3. 기타 결정 사항\n\n   • AMR 입고 완료 시점은 AMR 포크가 바닥에 닿는 시점 (ECS에 입고 명령 시점 확인)\n\n   • 입고대 BCR은 MES에 등록된 파렛트만 스캔하여 자동입고, 자동창고 입고 후에는 MES 파렛트 적재정보 사라짐\n\n   • BCR 자동 입고는 별도 시스템으로 기존 WMS 입고 시스템과 다르게 운용\n\n   • MES로 받은 파렛트 번호는 변경 불가\n\n   • BCR 고장시 대비하여 여분 필요\n\n   • 대기 존 공간 활용을 위해 구상했던 2단 렉 사용은 위치 인식 시스템 사용 어려움으로 불가\n\n   • 위치 인식 시스템 카메라 1대로 인식 가능 파렛트 수량 3~4파렛트로 예상\n"}],"schedule":[{"id":"sc_1","title":"자율이동로봇 주요 일정표 (2월4주차~3월1주차)","rows":[{"c0":"자율 주행 로봇 도입 업체 사전 미팅","c1":"시스템 인터페이스 및 개발 일정 협의\n(유유,액스비스,두산솔루션)","c2":"2월26일(목) 진행 완료"},{"c0":"CSV 문서 착수","c1":"URS 초안 자료작성","c2":"작성완료"},{"c0":"견적서 검토","c1":"업체 비교견적서 검토","c2":"검토완료"}]},{"id":"sc_2","title":"자율이동로봇 주요 일정표 (3월2주차~3월3주차)","rows":[{"c0":"CSV 문서 착수","c1":"URS 자료작성 및 승인","c2":"3월 4주차 승인 완료"},{"c0":"기안서 작성","c1":"기안서 상신","c2":"3월 3주차 기안 승인 완료"},{"c0":"표준 계약서 ","c1":"업체별 표준 계약서 작성 및 검토","c2":"3월 4주차 계약 완료"}]},{"id":"sc_1776153001952","title":"자율이동로봇 주요 일정표 (4월1주차~4월2주차)","rows":[{"c0":"AMR도입 KICK-OFF 회의","c1":"AMR도입 상황 설명, 문제점 질의 및 해결 방안 논의","c2":"4월 10일(금) 진행 완료"},{"c0":"발주 및 입고 현황","c1":"무인지게차, Server(ACS)\nAuto Door, 위치인식 시스템","c2":"4/13 발주\t\t6/10 입고 예정\n4/30 발주 예정\t"},{"c0":"시스템 인터페이스 현황","c1":"무인지게차 운영 시나리오\nACS(무인지게차) ↔ ECS","c2":"진척율 80%\t\t5/30 완료 예정\n진척율 10%\t\t9/30 완료 예정"},{"c0":"기타 업무 현황","c1":"CSV 에거슨 발주 처리 ","c2":"4/10 완료"},{"c0":"","c1":" 무인지게차 KCS 인증 진행중\n   - 기술문서 검토\n   - 시험\n   - 인증","c2":"\n4/17 완료\n4/27 진행 예정\n7/10 완료 예정"}]}],"timetable":[{"id":"amr","label":"자율이동로봇_FL10C","color":"#1565C0","css":"tl-gc-amr","period":"2월 4주 ~ 9월 3주","items":[{"no":"1","name":"업체 사전 미팅","sw":8,"ew":8},{"no":"2","name":"견적서 검토","sw":8,"ew":9},{"no":"3","name":"기안서 작성","sw":9,"ew":10},{"no":"4","name":"계약서 검토 및 체결","sw":11,"ew":12},{"no":"5","name":"AMR 설계, 발주, 제작, 검증, 납품","segments":[{"sw":13,"ew":14,"tip":"AMR (Autonomous Mobile Robot) 설계"},{"sw":15,"ew":18,"tip":"AMR (Autonomous Mobile Robot) 자재 발주, 제작"},{"sw":19,"ew":19,"tip":"AMR (Autonomous Mobile Robot) 제작"},{"sw":20,"ew":20,"tip":"AMR (Autonomous Mobile Robot) 제작, 검증"},{"sw":21,"ew":21,"tip":"AMR (Autonomous Mobile Robot) 검증"},{"sw":31,"ew":31,"tip":"AMR (Autonomous Mobile Robot) 납품"}]},{"no":"6","name":"충전기 및 위치인식 시스템 설치, 네트워크 공사","sw":32,"ew":32},{"no":"7","name":"자율이동로봇 맵핑","sw":33,"ew":33},{"no":"8","name":"제천공장 단동 테스트","sw":34,"ew":34},{"no":"9","name":"제천공장 Server 연동","sw":34,"ew":35}]},{"id":"sys","label":"시스템 인터페이스 / 데이터 연동","color":"#6A1B9A","css":"tl-gc-sys","period":"4월 1주 ~ 10월 2주","items":[{"no":"1","name":"자율이동로봇 ↔ ACS 개발 및 연동","sw":13,"ew":20},{"no":"2","name":"ACS ↔ 카메라 인식 시스템 개발 및 연동","sw":17,"ew":22},{"no":"3","name":"자율이동로봇 ↔ Auto 래핑기 연동","sw":21,"ew":24},{"no":"4","name":"MES / WMS / ECS/AMR 개발 및 시스템 연동","sw":13,"ew":38}]},{"id":"wrap","label":"Auto 랩핑기","color":"#E65100","css":"tl-gc-wrap","period":"4월 1주 ~ 8월 2주","items":[{"no":"1","name":"Auto 랩핑기 설계, 발주, 제작","segments":[{"sw":13,"ew":14,"tip":"Auto 랩핑기 설계"},{"sw":15,"ew":15,"tip":"Auto 랩핑기 설계, 발주"},{"sw":16,"ew":16,"tip":"Auto 랩핑기 자재 발주"},{"sw":17,"ew":17,"tip":"Auto 랩핑기 자재 발주, 제작"},{"sw":18,"ew":21,"tip":"Auto 랩핑기 제작"}]},{"no":"2","name":"Auto 랩핑기 납품 및 설치","sw":30,"ew":30}]},{"id":"door","label":"오토도어 공사및 연동","color":"#00695C","css":"tl-gc-door","period":"7월 1주 ~ 8월 3주","items":[{"no":"1","name":"발주, 철거 및 설치","sw":25,"ew":30},{"no":"2","name":"AMR 연동테스트","sw":31,"ew":31}]},{"id":"stab","label":"통합안정화/작업자 교육","color":"#2E7D32","css":"tl-gc-stab","period":"9월 3주 ~ 9월 4주","items":[{"no":"1","name":"전 장비, 설비 안정화(시스템 연동 테스트)","sw":35,"ew":36},{"no":"2","name":"현장 작업자 교육","sw":36,"ew":36}]},{"id":"csv","label":"CSV (컴퓨터화시스템 밸리데이션)","color":"#C62828","css":"tl-gc-csv","period":"3월 1주 ~ 10월 3주","items":[{"no":"1","name":"사용자 요구사항 (User Requirements Specification)","sw":9,"ew":12},{"no":"2","name":"밸리데이션 계획 (Validation Plan)","sw":28,"ew":29},{"no":"3","name":"기능기반리스크, 설계, 설치·운전, 성능 적격성 평가","segments":[{"sw":30,"ew":34,"tip":"기능기반리스크 평가 (Functional Risk Assessment)"},{"sw":35,"ew":36,"tip":"설계 적격성 평가 (Design Qualification)"},{"sw":37,"ew":37,"tip":"설치, 운전적격성 (Installation & Operational Qualification)"},{"sw":38,"ew":38,"tip":"성능 적격성 평가 (Performance Qualification)"}]},{"no":"4","name":"전체 검증결과 (Validation Report Summary)","sw":39,"ew":39}]},{"id":"check","label":"검수","color":"#37474F","css":"tl-gc-check","period":"10월 3주 ~ 10월 4주","items":[{"no":"1","name":"최종 검수","sw":39,"ew":40}]}]};
+  localStorage.setItem('amrChecklist', JSON.stringify(backup.checklist || []));
+  localStorage.setItem('amrReviews',   JSON.stringify(backup.reviews   || []));
+  localStorage.setItem('amrSchedule',  JSON.stringify(backup.schedule  || []));
+  var tlGroups = (backup.timetable || []).map(function(g) {
+    return { id: g.id, items: g.items };
+  });
+  localStorage.setItem('amrTlGroups', JSON.stringify(tlGroups));
+  console.log('[백업 복원] 2026-04-17 데이터가 로드되었습니다.');
+})();
+</script>
+</head>
+<body>
+<div class="main-wrapper">
+
+<div class="unified-header">
+    <h1>🤖 자율이동로봇 (AMR) 도입 프로젝트 통합 대시보드</h1>
+    <div class="subtitle">자율이동로봇_FL10C 도입 추진 일정 · 체크리스트 통합 관리 | 2026년</div>
+    <div class="header-badge">🏭 제천공장 AMR 프로젝트</div>
+    <div id="syncStatusBadge" style="position:absolute;top:20px;left:30px;background:rgba(158,158,158,0.8);color:white;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:bold;border:1px solid rgba(255,255,255,0.4);transition:background 0.3s;">⏳ 연결 중...</div>
+</div>
+
+<div class="page-nav">
+    <button class="page-tab active" onclick="showPage('timetable', this)">📅 타임테이블</button>
+    <button class="page-tab"        onclick="showPage('checklist', this)">📋 체크리스트</button>
+</div>
+
+<div id="page-timetable" class="page-section active">
+    <div class="tl-progress-section">
+        <div class="tl-progress-header">
+            <div class="tl-progress-title">📊 총 추진 진도율</div>
+            <div style="display:flex;align-items:center;gap:20px;">
+                <div style="text-align:center;">
+                    <div style="font-size:11px;color:#666;margin-bottom:2px;">프로젝트 완료까지</div>
+                    <div id="tlDday" style="font-size:20px;font-weight:bold;color:#ff5722;">D-???</div>
+                </div>
+                <div class="tl-progress-value" id="tlProgressValue">0%</div>
+            </div>
+        </div>
+        <div class="tl-progress-bar-container">
+            <div class="tl-progress-bar" id="tlProgressBar" style="width:0%">
+                <span id="tlProgressText"></span>
+            </div>
+        </div>
+        <div class="tl-stats">
+            <div class="tl-stat-card tl-completed" onclick="tlFilter('completed')">
+                <div class="tl-label">✅ 완료</div>
+                <div class="tl-value" id="tlCompletedCnt">0개</div>
+            </div>
+            <div class="tl-stat-card tl-in-progress" onclick="tlFilter('in_progress')">
+                <div class="tl-label">🔄 진행중</div>
+                <div class="tl-value" id="tlInProgressCnt">0개</div>
+            </div>
+            <div class="tl-stat-card tl-upcoming" onclick="tlFilter('upcoming')">
+                <div class="tl-label">📅 예정</div>
+                <div class="tl-value" id="tlUpcomingCnt">0개</div>
+            </div>
+        </div>
+        <div class="tl-filter-hint">▲ 클릭하여 상태별 필터링</div>
+    </div>
+
+    <div class="tl-schedule-section">
+        <h2 class="tl-section-title">
+            📅 추진 항목별 진행 타임라인
+            <span class="tl-reset-filter" id="tlResetBtn" onclick="tlResetFilter()">전체 보기</span>
+        </h2>
+        <div class="tl-timeline-container">
+            <div class="tl-timeline-header" id="tlTimelineHeader"></div>
+            <div id="tlTimelineContent"></div>
+            <div class="tl-legend">
+                <div class="tl-legend-item"><div class="tl-legend-color tl-lc-completed"></div>완료</div>
+                <div class="tl-legend-item"><div class="tl-legend-color tl-lc-progress"></div>진행중</div>
+                <div class="tl-legend-item"><div class="tl-legend-color tl-lc-upcoming"></div>예정</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tl-category-section">
+        <h2 class="tl-section-title">📋 추진 항목별 요약</h2>
+        <div class="tl-category-grid" id="tlCategoryGrid"></div>
+    </div>
+
+    <div class="tl-editor-section">
+        <div class="tl-editor-toggle" onclick="tlToggleEditor()">
+            <h2>✏️ 일정 직접 수정</h2>
+            <div class="tl-editor-toggle-icon">
+                <span>펼치기 / 접기</span>
+                <span class="arrow" id="tlEditorArrow">▼</span>
+            </div>
+        </div>
+        <div class="tl-editor-body" id="tlEditorBody">
+            <div class="tl-editor-desc">
+                📌 아래 표에서 항목명, 시작 주차, 종료 주차를 직접 수정한 뒤 <strong>「타임라인 적용」</strong> 버튼을 누르면 차트가 즉시 업데이트됩니다.<br>
+                🔀 세그먼트(엑셀 메모 구간)가 있는 항목은 <strong>「세그먼트 보기」</strong> 버튼으로 세부 구간도 수정할 수 있습니다.<br>
+                ♻️ 원래 일정으로 되돌리려면 「초기화」 버튼을 누르세요. 수정 내용은 브라우저에 자동 저장됩니다.
+            </div>
+            <div id="tlEditorGroups"></div>
+            <div class="tl-editor-actions">
+                <span class="tl-ed-saved-msg" id="tlEdSavedMsg">✅ 저장 완료</span>
+                <button class="tl-ed-btn tl-ed-btn-reset" onclick="tlEditorReset()">♻️ 초기화</button>
+                <button class="tl-ed-btn tl-ed-btn-apply" onclick="tlEditorApply()">🔄 타임라인 적용</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tl-history-section">
+        <h2 class="tl-section-title">📝 프로젝트 개요 및 추진 배경</h2>
+        <div class="tl-history-content" id="tlHistoryContent"></div>
+    </div>
+</div>
+
+<div id="page-checklist" class="page-section cl-section">
+    <div class="cl-nav-tabs">
+        <button class="cl-nav-tab active" onclick="clSwitchTab('cl-tab-list', this)">📋 체크리스트</button>
+        <button class="cl-nav-tab"        onclick="clSwitchTab('cl-tab-summary', this)">📊 진행 현황</button>
+        <button class="cl-nav-tab"        onclick="clSwitchTab('cl-tab-reviews', this)">📝 검토 회의</button>
+        <button class="cl-nav-tab"        onclick="clSwitchTab('cl-tab-schedule', this)">📆 주요 일정표</button>
+    </div>
+
+    <div id="cl-tab-list" class="cl-tab-content active">
+        <div class="cl-toolbar">
+            <button class="cl-btn cl-btn-primary"   onclick="clOpenModal()">➕ 항목 추가</button>
+            <button class="cl-btn cl-btn-secondary" onclick="clExportExcel()">📥 엑셀 내보내기</button>
+            <button class="cl-btn cl-btn-secondary" onclick="clImportExcel()">📤 엑셀 가져오기</button>
+            <button class="cl-btn cl-btn-secondary" onclick="clBackupMenu()">💾 로컬 백업</button>
+            <button class="cl-btn cl-btn-secondary" onclick="syncFromSheets(false)" style="background:#1565C0;color:white;">🔄 지금 동기화</button>
+            <input type="file" id="clImportFile" accept=".xlsx,.xls" onchange="clHandleImport(event)">
+            <input type="file" id="clBackupFile" accept=".json" onchange="clHandleBackupImport(event)" style="display:none">
+            <div class="cl-filter-group">
+                <button class="cl-filter-btn active" onclick="clFilterStatus('all', this)">전체</button>
+                <button class="cl-filter-btn" onclick="clFilterStatus('not-started', this)">미착수</button>
+                <button class="cl-filter-btn" onclick="clFilterStatus('in-progress', this)">진행중</button>
+                <button class="cl-filter-btn" onclick="clFilterStatus('completed', this)">완료</button>
+            </div>
+        </div>
+        <table class="cl-table">
+            <thead>
+                <tr>
+                    <th style="width:120px">카테고리</th>
+                    <th style="width:60px">번호</th>
+                    <th style="width:150px">항목</th>
+                    <th style="width:200px">문제점/검토사항</th>
+                    <th style="width:250px">논의 내용</th>
+                    <th style="width:155px">상태</th>
+                    <th style="width:200px">진행률</th>
+                    <th style="width:80px">작업</th>
+                </tr>
+            </thead>
+            <tbody id="clChecklistBody"></tbody>
+        </table>
+    </div>
+
+    <div id="cl-tab-summary" class="cl-tab-content">
+        <div class="cl-summary-grid">
+            <div class="cl-summary-card"><h3>📊 전체 항목</h3><div class="cl-sv" id="clTotal">0</div></div>
+            <div class="cl-summary-card"><h3>⏸️ 미착수</h3><div class="cl-sv" style="color:var(--cl-danger)" id="clNotStarted">0</div></div>
+            <div class="cl-summary-card"><h3>⚙️ 진행중</h3><div class="cl-sv" style="color:var(--cl-warning)" id="clInProgress">0</div></div>
+            <div class="cl-summary-card"><h3>✅ 완료</h3><div class="cl-sv" style="color:var(--cl-success)" id="clCompleted">0</div></div>
+        </div>
+        <h3 style="margin:28px 0 12px;color:var(--cl-gray-800)">전체 진행률</h3>
+        <div class="cl-overall-bar-wrap">
+            <div class="cl-overall-bar" id="clOverallBar" style="width:0%">0%</div>
+        </div>
+        <h3 style="margin:28px 0 12px;color:var(--cl-gray-800)">카테고리별 현황</h3>
+        <div class="cl-cat-summary" id="clCatSummary"></div>
+    </div>
+
+    <div id="cl-tab-reviews" class="cl-tab-content">
+        <div class="cl-toolbar">
+            <button class="cl-btn cl-btn-primary" onclick="clAddReview()">➕ 검토 회의 추가</button>
+        </div>
+        <div id="clReviewList"></div>
+    </div>
+
+    <div id="cl-tab-schedule" class="cl-tab-content">
+        <div class="cl-toolbar">
+            <button class="cl-btn cl-btn-secondary" onclick="clExportExcel()">📥 엑셀 내보내기</button>
+            <button class="cl-btn cl-btn-secondary" onclick="clImportExcel()">📤 엑셀 가져오기</button>
+        </div>
+        <div id="scList" class="sc-wrap"></div>
+        <div class="sc-footer">
+            <button class="sc-add-block-btn" onclick="scAddBlock()">➕ 주요 일정표 추가 <span style="opacity:.7;font-weight:400;font-size:12px">(2주 단위)</span></button>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<div id="clModal" class="cl-modal">
+    <div class="cl-modal-content">
+        <div class="cl-modal-header">
+            <h3>항목 추가</h3>
+            <button class="cl-close-btn" onclick="clCloseModal()">×</button>
+        </div>
+        <form id="clItemForm">
+            <div class="cl-form-group">
+                <label>카테고리 *</label>
+                <select id="clItemCategory" required>
+                    <option value="">선택하세요</option>
+                    <option value="WMS 연동">WMS 연동</option>
+                    <option value="물류 동선\n및 안전">물류 동선 및 안전</option>
+                    <option value="랩핑 프로세스\n자동화">랩핑 프로세스 자동화</option>
+                    <option value="시뮬레이션\n및 성능">시뮬레이션 및 성능</option>
+                    <option value="장애 및\n예외 처리">장애 및 예외 처리</option>
+                    <option value="custom">직접 입력...</option>
+                </select>
+            </div>
+            <div class="cl-form-group" id="clCustomCatGroup" style="display:none">
+                <label>새 카테고리 이름 *</label>
+                <input type="text" id="clCustomCat" placeholder="카테고리 이름을 입력하세요">
+            </div>
+            <div class="cl-form-group"><label>항목 *</label><input type="text" id="clItemName" required placeholder="항목명을 입력하세요"></div>
+            <div class="cl-form-group"><label>문제점/검토사항</label><textarea id="clItemProblem" placeholder="문제점 또는 검토사항을 입력하세요"></textarea></div>
+            <div class="cl-form-group"><label>논의 내용</label><textarea id="clItemSolution" placeholder="논의 내용을 입력하세요"></textarea></div>
+            <div class="cl-form-group">
+                <label>상태 *</label>
+                <select id="clItemStatus" required>
+                    <option value="not-started">미착수</option>
+                    <option value="in-progress">진행중</option>
+                    <option value="completed">완료</option>
+                </select>
+            </div>
+            <div class="cl-form-group">
+                <label>진행률 *</label>
+                <select id="clItemProgress" required>
+                    <option value="0">0%</option><option value="25">25%</option>
+                    <option value="50">50%</option><option value="75">75%</option>
+                    <option value="100">100%</option>
+                </select>
+            </div>
+            <button type="submit" class="cl-btn cl-btn-primary" style="width:100%">저장</button>
+        </form>
+    </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════
+   GOOGLE SHEETS 실시간 동기화
+════════════════════════════════════════ */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx7m_AVhyI4jKGslD7Gavw1YCMhaPRgWHuvjhaR6lIGqIXQQnQUr6otUji2RkWi_xNi/exec';
+let isSyncing = false;
+
+async function syncFromSheets(silent) {
+    if (isSyncing) return;
+    isSyncing = true;
+    updateSyncStatus('syncing');
+    try {
+        const res  = await fetch(GAS_URL + '?action=read&t=' + Date.now());
+        const data = await res.json();
+        let updated = false;
+
+        if (data.checklist && data.checklist.length) {
+            clData = data.checklist;
+            localStorage.setItem('amrChecklist', JSON.stringify(clData));
+            updated = true;
+        }
+        if (data.reviews && data.reviews.length) {
+            clReviews = data.reviews;
+            localStorage.setItem('amrReviews', JSON.stringify(clReviews));
+        }
+        if (data.schedule && data.schedule.length) {
+            scData = data.schedule;
+            localStorage.setItem('amrSchedule', JSON.stringify(scData));
+        }
+        if (data.timetable && data.timetable.length) {
+            data.timetable.forEach(sg => {
+                const gi = tlGroups.findIndex(g => g.id === sg.id);
+                if (gi < 0) return;
+                sg.items.forEach((si, ii) => {
+                    if (!tlGroups[gi].items[ii]) return;
+                    tlGroups[gi].items[ii].name = si.name;
+                    if (si.segments) tlGroups[gi].items[ii].segments = si.segments;
+                    else { tlGroups[gi].items[ii].sw = si.sw; tlGroups[gi].items[ii].ew = si.ew; }
+                });
+            });
+            localStorage.setItem('amrTlGroups', JSON.stringify(data.timetable));
+        }
+
+        if (updated) {
+            clRenderChecklist();
+            clUpdateSummary();
+            document.getElementById('tlTimelineContent').innerHTML = '';
+            tlRenderTimeline();
+            if (document.getElementById('scList') && document.getElementById('cl-tab-schedule').classList.contains('active')) scRender();
+        }
+        updateSyncStatus('ok');
+        if (!silent) clShowToast('🔄 최신 데이터로 업데이트되었습니다');
+    } catch(e) {
+        updateSyncStatus('error');
+        console.warn('Sheets 동기화 실패 (로컬 저장 유지):', e);
+    } finally {
+        isSyncing = false;
+    }
+}
+
+async function saveToSheets(payload) {
+    try {
+        await fetch(GAS_URL, {
+            method : 'POST',
+            mode   : 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body   : JSON.stringify(payload)
+        });
+        updateSyncStatus('ok');
+    } catch(e) {
+        updateSyncStatus('error');
+        console.warn('Sheets 저장 실패 (로컬은 유지):', e);
+    }
+}
+
+function updateSyncStatus(state) {
+    const el = document.getElementById('syncStatusBadge');
+    if (!el) return;
+    const map = {
+        ok:      ['☁️ 동기화됨',    'rgba(76,175,80,0.9)'],
+        syncing: ['🔄 동기화 중...', 'rgba(255,152,0,0.9)'],
+        error:   ['⚠️ 오프라인',    'rgba(244,67,54,0.9)'],
+    };
+    const [text, bg] = map[state] || map.error;
+    el.textContent = text;
+    el.style.background = bg;
+}
+
+/* ════════════════════════════════════════
+   PAGE SWITCHER
+════════════════════════════════════════ */
+function showPage(id, btn) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    btn.classList.add('active');
+}
+
+/* ════════════════════════════════════════
+   TIMETABLE JS
+════════════════════════════════════════ */
+const TL_TOTAL_WEEKS = 48;
+const TL_YEAR = 2026;
+
+const tlGroups = [
+    { id:"amr", label:"자율이동로봇_FL10C", color:"#1565C0", css:"tl-gc-amr", period:"2월 4주 ~ 9월 3주",
+      items:[
+        {no:"1", name:"업체 사전 미팅", sw:8, ew:8},
+        {no:"2", name:"견적서 검토", sw:8, ew:9},
+        {no:"3", name:"기안서 작성", sw:9, ew:10},
+        {no:"4", name:"계약서 검토 및 체결", sw:11, ew:12},
+        {no:"5", name:"AMR 설계, 발주, 제작, 검증, 납품",
+          segments:[{sw:13, ew:14, tip:"AMR 설계"},{sw:15, ew:18, tip:"AMR 자재 발주, 제작"},{sw:19, ew:19, tip:"AMR 제작"},{sw:20, ew:20, tip:"AMR 제작, 검증"},{sw:21, ew:21, tip:"AMR 검증"},{sw:31, ew:31, tip:"AMR 납품"}]},
+        {no:"6", name:"충전기 및 위치인식 시스템 설치, 네트워크 공사", sw:32, ew:32},
+        {no:"7", name:"자율이동로봇 맵핑", sw:33, ew:33},
+        {no:"8", name:"제천공장 단동 테스트", sw:34, ew:34},
+        {no:"9", name:"제천공장 Server 연동", sw:34, ew:35},
+      ]},
+    { id:"sys", label:"시스템 인터페이스 / 데이터 연동", color:"#6A1B9A", css:"tl-gc-sys", period:"4월 1주 ~ 10월 2주",
+      items:[
+        {no:"1", name:"자율이동로봇 ↔ ACS 개발 및 연동", sw:13, ew:20},
+        {no:"2", name:"ACS ↔ 카메라 인식 시스템 개발 및 연동", sw:17, ew:22},
+        {no:"3", name:"자율이동로봇 ↔ Auto 래핑기 연동", sw:21, ew:24},
+        {no:"4", name:"MES / WMS / ECS/AMR 개발 및 시스템 연동", sw:13, ew:38},
+      ]},
+    { id:"wrap", label:"Auto 랩핑기", color:"#E65100", css:"tl-gc-wrap", period:"4월 1주 ~ 8월 2주",
+      items:[
+        {no:"1", name:"Auto 랩핑기 설계, 발주, 제작",
+          segments:[{sw:13, ew:14, tip:"Auto 랩핑기 설계"},{sw:15, ew:15, tip:"Auto 랩핑기 설계, 발주"},{sw:16, ew:16, tip:"Auto 랩핑기 자재 발주"},{sw:17, ew:17, tip:"Auto 랩핑기 자재 발주, 제작"},{sw:18, ew:21, tip:"Auto 랩핑기 제작"}]},
+        {no:"2", name:"Auto 랩핑기 납품 및 설치", sw:30, ew:30},
+      ]},
+    { id:"door", label:"오토도어 공사및 연동", color:"#00695C", css:"tl-gc-door", period:"7월 1주 ~ 8월 3주",
+      items:[
+        {no:"1", name:"발주, 철거 및 설치", sw:25, ew:30},
+        {no:"2", name:"AMR 연동테스트", sw:31, ew:31},
+      ]},
+    { id:"stab", label:"통합안정화/작업자 교육", color:"#2E7D32", css:"tl-gc-stab", period:"9월 3주 ~ 9월 4주",
+      items:[
+        {no:"1", name:"전 장비, 설비 안정화(시스템 연동 테스트)", sw:35, ew:36},
+        {no:"2", name:"현장 작업자 교육", sw:36, ew:36},
+      ]},
+    { id:"csv", label:"CSV (컴퓨터화시스템 밸리데이션)", color:"#C62828", css:"tl-gc-csv", period:"3월 1주 ~ 10월 3주",
+      items:[
+        {no:"1", name:"사용자 요구사항 (User Requirements Specification)", sw:9, ew:12},
+        {no:"2", name:"밸리데이션 계획 (Validation Plan)", sw:28, ew:29},
+        {no:"3", name:"기능기반리스크, 설계, 설치·운전, 성능 적격성 평가",
+          segments:[{sw:30, ew:34, tip:"기능기반리스크 평가"},{sw:35, ew:36, tip:"설계 적격성 평가"},{sw:37, ew:37, tip:"설치, 운전적격성"},{sw:38, ew:38, tip:"성능 적격성 평가"}]},
+        {no:"4", name:"전체 검증결과 (Validation Report Summary)", sw:39, ew:39},
+      ]},
+    { id:"check", label:"검수", color:"#37474F", css:"tl-gc-check", period:"10월 3주 ~ 10월 4주",
+      items:[
+        {no:"1", name:"최종 검수", sw:39, ew:40},
+      ]},
+];
+
+const tlHistoryLines = [
+    '📌 본 프로젝트는 제천공장의 물류 자동화를 위한 AMR(자율이동로봇) 도입 프로젝트입니다.',
+    '🔹 자율이동로봇(FL10C) 도입을 통해 반복적인 물류 이동 작업을 자동화합니다.',
+    '🔹 Auto 랩핑기, 오토도어와의 연동을 통해 완전 자동화 라인을 구성합니다.',
+    '🔹 MES / WMS / ECS 시스템과의 통합 연동으로 스마트 물류 시스템을 완성합니다.',
+    '🔹 CSV(컴퓨터화시스템 밸리데이션)를 병행하여 GMP 규정에 적합한 검증을 완료합니다.',
+    '📅 전체 일정: 2026년 1월 ~ 2026년 10월 (약 10개월)',
+];
+
+function tlWeekToLabel(w){
+    const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    return months[Math.floor((w-1)/4)] + ' ' + (((w-1)%4)+1) + '주';
+}
+function tlGetCurrentWeek(){
+    const now = new Date();
+    const year = now.getFullYear();
+    if(year < TL_YEAR) return 0;
+    if(year > TL_YEAR) return TL_TOTAL_WEEKS + 1;
+    const month = now.getMonth();
+    const day   = now.getDate();
+    const weekInMonth = Math.min(Math.ceil(day / 7), 4);
+    return Math.min(month * 4 + weekInMonth, TL_TOTAL_WEEKS);
+}
+function tlGetCurrentPercent(){
+    const now = new Date();
+    const year = now.getFullYear();
+    if(year < TL_YEAR) return 0;
+    if(year > TL_YEAR) return 100;
+    const month = now.getMonth();
+    const day   = now.getDate();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const monthProgress = (day - 1) / daysInMonth;
+    const exactWeek = month * 4 + monthProgress * 4;
+    return Math.min((exactWeek / TL_TOTAL_WEEKS) * 100, 100);
+}
+function tlItemSw(item){ return item.segments ? Math.min(...item.segments.map(s=>s.sw)) : item.sw; }
+function tlItemEw(item){ return item.segments ? Math.max(...item.segments.map(s=>s.ew)) : item.ew; }
+function tlStatus(item, cw){
+    const sw=tlItemSw(item), ew=tlItemEw(item);
+    if(ew<cw) return 'completed';
+    if(sw<=cw) return 'in_progress';
+    return 'upcoming';
+}
+function tlSegStatus(seg, cw){
+    if(seg.ew<cw) return 'completed';
+    if(seg.sw<=cw) return 'in_progress';
+    return 'upcoming';
+}
+function tlLighten(hex){
+    const r=Math.min(255,parseInt(hex.slice(1,3),16)+60);
+    const g=Math.min(255,parseInt(hex.slice(3,5),16)+60);
+    const b=Math.min(255,parseInt(hex.slice(5,7),16)+60);
+    return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function tlMakeTip(mainText, periodText){
+    const tip=document.createElement('div'); tip.className='tl-bar-tooltip';
+    tip.innerHTML=`<span class="tip-main">${mainText}</span><span class="tip-period">${periodText}</span>`;
+    return tip;
+}
+function tlMakeBar(sw, ew, st, groupColor, tipMain, tipPeriod, isSegment){
+    const lp=((sw-1)/TL_TOTAL_WEEKS)*100;
+    const wp=Math.max(((ew-sw+1)/TL_TOTAL_WEEKS)*100, 1.2);
+    const bc=document.createElement('div');
+    bc.className='tl-bar-container' + (isSegment?' tl-seg':'');
+    bc.style.left=lp+'%'; bc.style.width=wp+'%';
+    const bar=document.createElement('div'); bar.className=`tl-bar ${st}`;
+    if(st==='upcoming') bar.style.background=`linear-gradient(135deg,${groupColor},${tlLighten(groupColor)})`;
+    bar.appendChild(tlMakeTip(tipMain, tipPeriod));
+    bc.appendChild(bar);
+    return bc;
+}
+
+let tlCurrentFilter = null;
+
+function tlRenderHeader(){
+    const hdr=document.getElementById('tlTimelineHeader');
+    ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'].forEach(m=>{
+        const d=document.createElement('div'); d.className='tl-month-label'; d.textContent=m; hdr.appendChild(d);
+    });
+}
+
+function tlRenderTimeline(){
+    const cont=document.getElementById('tlTimelineContent');
+    cont.innerHTML='';
+    const cw=tlGetCurrentWeek(), cp=tlGetCurrentPercent();
+    let isFirst=true, comp=0, inProg=0, upc=0;
+
+    tlGroups.forEach(group=>{
+        const gRow=document.createElement('div');
+        gRow.className=`tl-timeline-row tl-group-header ${group.css}`;
+        gRow.style.setProperty('--group-color',group.color);
+        gRow.setAttribute('data-group',group.id);
+        const gLbl=document.createElement('div'); gLbl.className='tl-timeline-label';
+        gLbl.innerHTML=`<span class="tl-group-badge" style="background:${group.color}">◆</span>
+            <span class="tl-group-row-label" style="color:${group.color}">${group.label}</span>`;
+        const gChart=document.createElement('div'); gChart.className='tl-chart';
+        for(let i=1;i<12;i++){const d=document.createElement('div');d.className='tl-month-divider';d.style.left=(i/12*100)+'%';gChart.appendChild(d);}
+        gRow.appendChild(gLbl); gRow.appendChild(gChart); cont.appendChild(gRow);
+
+        group.items.forEach(item=>{
+            const st=tlStatus(item,cw);
+            if(st==='completed') comp++; else if(st==='in_progress') inProg++; else upc++;
+
+            const row=document.createElement('div');
+            row.className='tl-timeline-row';
+            row.setAttribute('data-status',st);
+            row.setAttribute('data-group',group.id);
+
+            const lbl=document.createElement('div'); lbl.className='tl-timeline-label';
+            lbl.innerHTML=`<span class="tl-num ${st}" style="${st==='upcoming'?'background:'+group.color:''}">${item.no}</span>
+                <span style="font-size:11px">${item.name}</span>`;
+
+            const chart=document.createElement('div'); chart.className='tl-chart';
+            for(let i=1;i<12;i++){const d=document.createElement('div');d.className='tl-month-divider';d.style.left=(i/12*100)+'%';chart.appendChild(d);}
+
+            const line=document.createElement('div'); line.className='tl-current-line'; line.style.left=cp+'%';
+            if(isFirst){
+                isFirst=false;
+                const dl=document.createElement('div'); dl.className='tl-current-label';
+                const now=new Date(); dl.textContent=`${now.getMonth()+1}월 ${now.getDate()}일`;
+                line.appendChild(dl);
+            }
+            chart.appendChild(line);
+
+            if(item.segments && item.segments.length > 0){
+                item.segments.forEach(seg=>{
+                    const segSt = tlSegStatus(seg, cw);
+                    const period = seg.sw===seg.ew ? tlWeekToLabel(seg.sw) : `${tlWeekToLabel(seg.sw)} ~ ${tlWeekToLabel(seg.ew)}`;
+                    chart.appendChild(tlMakeBar(seg.sw, seg.ew, segSt, group.color, seg.tip, period, true));
+                });
+            } else {
+                const sw=item.sw, ew=item.ew;
+                const period = sw===ew ? tlWeekToLabel(sw) : `${tlWeekToLabel(sw)} ~ ${tlWeekToLabel(ew)}`;
+                chart.appendChild(tlMakeBar(sw, ew, st, group.color, item.name, period, false));
+            }
+
+            row.appendChild(lbl); row.appendChild(chart); cont.appendChild(row);
+        });
+    });
+
+    const total=comp+inProg+upc, rate=total>0?(comp/total*100).toFixed(1):0;
+    document.getElementById('tlCompletedCnt').textContent=comp+'개';
+    document.getElementById('tlInProgressCnt').textContent=inProg+'개';
+    document.getElementById('tlUpcomingCnt').textContent=upc+'개';
+    tlAnimateProgress(parseFloat(rate));
+
+    const end=new Date(TL_YEAR,9,31), diff=Math.ceil((end-new Date())/(86400000));
+    const el=document.getElementById('tlDday');
+    if(diff>0){el.textContent='D-'+diff;el.style.color='#ff5722';}
+    else if(diff===0){el.textContent='D-DAY';el.style.color='#ff0000';}
+    else{el.textContent='D+'+Math.abs(diff);el.style.color='#9e9e9e';}
+}
+
+function tlAnimateProgress(target){
+    const bar=document.getElementById('tlProgressBar');
+    const val=document.getElementById('tlProgressValue');
+    const txt=document.getElementById('tlProgressText');
+    let cur=0; const steps=40, inc=target/steps;
+    const iv=setInterval(()=>{
+        cur=Math.min(cur+inc,target);
+        bar.style.width=cur+'%'; val.textContent=Math.round(cur)+'%';
+        if(cur>=10) txt.textContent=Math.round(cur)+'%';
+        if(cur>=target) clearInterval(iv);
+    },1000/steps);
+}
+
+function tlFilter(status){
+    const rows=document.querySelectorAll('.tl-timeline-row:not(.tl-group-header)');
+    const cards=document.querySelectorAll('.tl-stat-card');
+    const btn=document.getElementById('tlResetBtn');
+    if(tlCurrentFilter===status){tlResetFilter();return;}
+    tlCurrentFilter=status;
+    cards.forEach(c=>{
+        c.classList.remove('active');
+        if((status==='completed'&&c.classList.contains('tl-completed'))||
+           (status==='in_progress'&&c.classList.contains('tl-in-progress'))||
+           (status==='upcoming'&&c.classList.contains('tl-upcoming'))) c.classList.add('active');
+    });
+    rows.forEach(r=>{
+        const rs=r.getAttribute('data-status');
+        if(rs===status){r.classList.remove('hidden');r.classList.add('highlight');}
+        else{r.classList.add('hidden');r.classList.remove('highlight');}
+    });
+    document.querySelectorAll('.tl-timeline-row.tl-group-header').forEach(gh=>{
+        const gid=gh.getAttribute('data-group');
+        const hasVis=Array.from(document.querySelectorAll(`.tl-timeline-row:not(.tl-group-header)[data-group="${gid}"]`)).some(r=>!r.classList.contains('hidden'));
+        gh.classList.toggle('hidden',!hasVis);
+    });
+    btn.classList.add('show');
+}
+function tlResetFilter(){
+    tlCurrentFilter=null;
+    document.querySelectorAll('.tl-timeline-row').forEach(r=>{r.classList.remove('hidden');r.classList.remove('highlight');});
+    document.querySelectorAll('.tl-stat-card').forEach(c=>c.classList.remove('active'));
+    document.getElementById('tlResetBtn').classList.remove('show');
+}
+
+function tlRenderCategories(){
+    const grid=document.getElementById('tlCategoryGrid');
+    tlGroups.forEach(g=>{
+        const card=document.createElement('div');
+        card.className=`tl-cat-card ${g.css}`;
+        card.style.setProperty('--group-color',g.color);
+        card.innerHTML=`<div class="tl-cat-title">▶ ${g.label}</div>
+            <div class="tl-cat-items">${g.items.map(i=>`• ${i.name}`).join('<br>')}</div>
+            <div class="tl-cat-period">📅 ${g.period} (${g.items.length}개 세부 절차)</div>`;
+        grid.appendChild(card);
+    });
+}
+function tlRenderHistory(){
+    const el=document.getElementById('tlHistoryContent');
+    tlHistoryLines.forEach(line=>{
+        const d=document.createElement('div'); d.className='tl-history-item'; d.textContent=line; el.appendChild(d);
+    });
+}
+
+/* ════════════════════════════════════════
+   TIMETABLE EDITOR JS
+════════════════════════════════════════ */
+const TL_DEFAULT_GROUPS = JSON.parse(JSON.stringify(tlGroups));
+const TL_WEEKS = 40;
+
+function tlWkLabel(w){
+    const m=Math.floor((w-1)/4)+1, wm=((w-1)%4)+1;
+    return `${m}월 ${wm}주`;
+}
+function tlWeekOptions(selected){
+    let html='';
+    for(let w=1;w<=TL_WEEKS;w++){
+        html+=`<option value="${w}" ${w===selected?'selected':''}>${tlWkLabel(w)}</option>`;
+    }
+    return html;
+}
+
+function tlToggleEditor(){
+    const body=document.getElementById('tlEditorBody');
+    const arrow=document.getElementById('tlEditorArrow');
+    const open=body.classList.toggle('open');
+    arrow.classList.toggle('open', open);
+    if(open && !document.getElementById('tlEditorGroups').children.length){
+        tlRenderEditor();
+    }
+}
+
+function tlRenderEditor(){
+    const container=document.getElementById('tlEditorGroups');
+    container.innerHTML='';
+    tlGroups.forEach((group, gi)=>{
+        const wrap=document.createElement('div');
+        wrap.className='tl-editor-group';
+        const gh=document.createElement('div');
+        gh.className='tl-editor-group-header';
+        gh.style.background=group.color;
+        gh.innerHTML=`<div class="dot"></div><span>${group.label}</span>`;
+        wrap.appendChild(gh);
+        const tbl=document.createElement('table');
+        tbl.className='tl-editor-table';
+        tbl.innerHTML=`<thead><tr>
+            <th class="tl-ed-no">No.</th>
+            <th>항목명</th>
+            <th class="tl-ed-week-cell">시작 주차</th>
+            <th class="tl-ed-week-cell">종료 주차</th>
+            <th style="width:90px">세그먼트</th>
+        </tr></thead>`;
+        const tbody=document.createElement('tbody');
+
+        group.items.forEach((item, ii)=>{
+            const hasSeg = item.segments && item.segments.length > 0;
+            const sw = hasSeg ? Math.min(...item.segments.map(s=>s.sw)) : item.sw;
+            const ew = hasSeg ? Math.max(...item.segments.map(s=>s.ew)) : item.ew;
+            const rowId = `ed-${gi}-${ii}`;
+            const segRowId = `seg-rows-${gi}-${ii}`;
+
+            const tr=document.createElement('tr');
+            tr.innerHTML=`
+                <td class="tl-ed-no">${item.no}</td>
+                <td class="tl-ed-name-cell">
+                    <input class="tl-ed-name" id="${rowId}-name" value="${item.name}" data-gi="${gi}" data-ii="${ii}" data-field="name">
+                </td>
+                <td class="tl-ed-week-cell">
+                    <select class="tl-ed-week" id="${rowId}-sw" data-gi="${gi}" data-ii="${ii}" data-field="sw" ${hasSeg?'disabled title="세그먼트로 관리됩니다"':''}>
+                        ${tlWeekOptions(sw)}
+                    </select>
+                </td>
+                <td class="tl-ed-week-cell">
+                    <select class="tl-ed-week" id="${rowId}-ew" data-gi="${gi}" data-ii="${ii}" data-field="ew" ${hasSeg?'disabled title="세그먼트로 관리됩니다"':''}>
+                        ${tlWeekOptions(ew)}
+                    </select>
+                </td>
+                <td>
+                    <div style="display:flex;gap:6px;align-items:center;justify-content:center;">
+                        ${hasSeg ? `<button class="tl-ed-seg-toggle" onclick="tlToggleSegRows('${segRowId}', this)">▸ 세그먼트</button>` : ''}
+                        <button class="tl-ed-item-delete" onclick="tlDeleteItem(${gi}, ${ii})">🗑️</button>
+                    </div>
+                </td>`;
+            tbody.appendChild(tr);
+
+            if(hasSeg){
+                item.segments.forEach((seg, si)=>{
+                    const segTr=document.createElement('tr');
+                    segTr.className='tl-seg-row';
+                    segTr.setAttribute('data-seg-group', segRowId);
+                    segTr.style.display='none';
+                    segTr.innerHTML=`
+                        <td class="tl-ed-no" style="color:#bbb;font-size:10px">${item.no}-${si+1}</td>
+                        <td class="tl-ed-name-cell">
+                            <span class="tl-seg-label"></span>
+                            <input class="tl-ed-name seg-tip" value="${seg.tip}" data-gi="${gi}" data-ii="${ii}" data-si="${si}" data-field="tip">
+                        </td>
+                        <td class="tl-ed-week-cell">
+                            <select class="tl-ed-week" data-gi="${gi}" data-ii="${ii}" data-si="${si}" data-field="seg-sw">
+                                ${tlWeekOptions(seg.sw)}
+                            </select>
+                        </td>
+                        <td class="tl-ed-week-cell">
+                            <select class="tl-ed-week" data-gi="${gi}" data-ii="${ii}" data-si="${si}" data-field="seg-ew">
+                                ${tlWeekOptions(seg.ew)}
+                            </select>
+                        </td>
+                        <td></td>`;
+                    tbody.appendChild(segTr);
+                });
+            }
+        });
+
+        tbl.appendChild(tbody);
+        wrap.appendChild(tbl);
+        container.appendChild(wrap);
+    });
+}
+
+function tlToggleSegRows(segRowId, btn){
+    const rows=document.querySelectorAll(`[data-seg-group="${segRowId}"]`);
+    const isOpen=rows[0] && rows[0].style.display!=='none';
+    rows.forEach(r=>r.style.display=isOpen?'none':'table-row');
+    btn.textContent=isOpen?'▸ 세그먼트 보기':'▾ 세그먼트 닫기';
+}
+
+function tlDeleteItem(gi, ii){
+    if(!confirm('이 항목을 삭제하시겠습니까?')) return;
+    tlGroups[gi].items.splice(ii, 1);
+    document.getElementById('tlEditorGroups').innerHTML='';
+    tlRenderEditor();
+}
+
+function tlEditorCollect(){
+    document.querySelectorAll('.tl-ed-name[data-field="name"]').forEach(el=>{
+        const gi=+el.dataset.gi, ii=+el.dataset.ii;
+        tlGroups[gi].items[ii].name=el.value.trim()||tlGroups[gi].items[ii].name;
+    });
+    document.querySelectorAll('.tl-ed-week[data-field="sw"]').forEach(el=>{
+        if(el.disabled) return;
+        const gi=+el.dataset.gi, ii=+el.dataset.ii;
+        tlGroups[gi].items[ii].sw=+el.value;
+    });
+    document.querySelectorAll('.tl-ed-week[data-field="ew"]').forEach(el=>{
+        if(el.disabled) return;
+        const gi=+el.dataset.gi, ii=+el.dataset.ii;
+        tlGroups[gi].items[ii].ew=+el.value;
+    });
+    document.querySelectorAll('.tl-ed-name[data-field="tip"]').forEach(el=>{
+        const gi=+el.dataset.gi, ii=+el.dataset.ii, si=+el.dataset.si;
+        tlGroups[gi].items[ii].segments[si].tip=el.value.trim()||tlGroups[gi].items[ii].segments[si].tip;
+    });
+    document.querySelectorAll('.tl-ed-week[data-field="seg-sw"]').forEach(el=>{
+        const gi=+el.dataset.gi, ii=+el.dataset.ii, si=+el.dataset.si;
+        tlGroups[gi].items[ii].segments[si].sw=+el.value;
+    });
+    document.querySelectorAll('.tl-ed-week[data-field="seg-ew"]').forEach(el=>{
+        const gi=+el.dataset.gi, ii=+el.dataset.ii, si=+el.dataset.si;
+        tlGroups[gi].items[ii].segments[si].ew=+el.value;
+    });
+}
+
+function tlEditorApply(){
+    tlEditorCollect();
+    tlSaveEditorData();
+    document.getElementById('tlCategoryGrid').innerHTML='';
+    tlRenderCategories();
+    tlRenderTimeline();
+    const msg=document.getElementById('tlEdSavedMsg');
+    msg.style.opacity='1';
+    setTimeout(()=>msg.style.opacity='0', 2200);
+}
+
+function tlEditorReset(){
+    if(!confirm('일정을 원래 값으로 초기화하시겠습니까?')) return;
+    const def=JSON.parse(JSON.stringify(TL_DEFAULT_GROUPS));
+    def.forEach((g,gi)=>{ tlGroups[gi].items=g.items; });
+    localStorage.removeItem('amrTlGroups');
+    document.getElementById('tlEditorGroups').innerHTML='';
+    tlRenderEditor();
+    document.getElementById('tlCategoryGrid').innerHTML='';
+    tlRenderCategories();
+    tlRenderTimeline();
+    const msg=document.getElementById('tlEdSavedMsg');
+    msg.textContent='♻️ 초기화 완료'; msg.style.opacity='1';
+    setTimeout(()=>{ msg.style.opacity='0'; msg.textContent='✅ 저장 완료'; }, 2200);
+}
+
+function tlSaveEditorData(){
+    const snapshot=tlGroups.map(g=>({
+        id:g.id,
+        items:g.items.map(item=>{
+            const base={no:item.no, name:item.name};
+            if(item.segments){ base.segments=item.segments.map(s=>({...s})); }
+            else { base.sw=item.sw; base.ew=item.ew; }
+            return base;
+        })
+    }));
+    localStorage.setItem('amrTlGroups', JSON.stringify(snapshot));
+    saveToSheets({ timetable: snapshot });
+}
+
+function tlLoadEditorData(){
+    const saved=localStorage.getItem('amrTlGroups');
+    if(!saved) return;
+    try{
+        const data=JSON.parse(saved);
+        data.forEach(sg=>{
+            const gi=tlGroups.findIndex(g=>g.id===sg.id);
+            if(gi<0) return;
+            sg.items.forEach((si, ii)=>{
+                if(!tlGroups[gi].items[ii]) return;
+                tlGroups[gi].items[ii].name=si.name;
+                if(si.segments) tlGroups[gi].items[ii].segments=si.segments;
+                else { tlGroups[gi].items[ii].sw=si.sw; tlGroups[gi].items[ii].ew=si.ew; }
+            });
+        });
+    }catch(e){ console.warn('일정 데이터 로드 실패', e); }
+}
+
+/* ════════════════════════════════════════
+   CHECKLIST JS
+════════════════════════════════════════ */
+const clInitialData = [];
+let clData = [];
+let clReviews = [];
+let scData = [];
+let clCurrentFilter = 'all';
+
+function clLoadData(){
+    const sc = localStorage.getItem('amrSchedule');
+    scData = sc ? JSON.parse(sc) : JSON.parse(JSON.stringify(SC_INITIAL));
+    if(!sc) scSave();
+    const s=localStorage.getItem('amrChecklist');
+    clData = s ? JSON.parse(s) : [];
+    if(!s) clSaveDataSilent();
+    const r=localStorage.getItem('amrReviews');
+    clReviews = r ? JSON.parse(r) : [];
+}
+
+function clSaveDataSilent(){
+    localStorage.setItem('amrChecklist',JSON.stringify(clData));
+    localStorage.setItem('amrReviews',JSON.stringify(clReviews));
+    saveToSheets({ checklist: clData, reviews: clReviews });
+}
+
+function clSaveData(){
+    clSaveDataSilent();
+    clShowToast('💾 저장 및 동기화 중...');
+}
+
+function clSwitchTab(tabId, btn){
+    document.querySelectorAll('.cl-section .cl-tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.cl-section .cl-nav-tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+    if(tabId==='cl-tab-summary') clUpdateSummary();
+    else if(tabId==='cl-tab-reviews') clRenderReviews();
+    else if(tabId==='cl-tab-schedule') scRender();
+}
+
+function clFilterStatus(status, btn){
+    clCurrentFilter=status;
+    document.querySelectorAll('.cl-filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    clRenderChecklist();
+}
+
+function clRenderChecklist(){
+    const tbody=document.getElementById('clChecklistBody');
+    tbody.innerHTML='';
+    const grouped={};
+    clData.forEach((item,idx)=>{
+        if(!grouped[item.category]) grouped[item.category]=[];
+        grouped[item.category].push({...item,origIdx:idx});
+    });
+    Object.keys(grouped).forEach(cat=>{
+        const items=grouped[cat];
+        const filtered=items.filter(i=>clCurrentFilter==='all'||i.status===clCurrentFilter);
+        if(!filtered.length) return;
+        filtered.forEach((item,idx)=>{
+            const row=document.createElement('tr');
+            row.dataset.index=item.origIdx; row.dataset.status=item.status;
+            if(idx===0){
+                const cc=document.createElement('td');
+                cc.className='cl-category-cell cl-editable'; cc.rowSpan=filtered.length;
+                cc.contentEditable=true; cc.textContent=cat;
+                cc.addEventListener('blur',()=>{
+                    const nc=cc.textContent;
+                    if(nc!==cat){clData.forEach(d=>{if(d.category===cat)d.category=nc;}); clSaveData(); clRenderChecklist();}
+                });
+                row.appendChild(cc);
+            }
+            const nc=document.createElement('td'); nc.className='cl-editable'; nc.contentEditable=true;
+            nc.textContent=item.number; nc.style.cssText='text-align:center;font-weight:600;color:var(--cl-gray-700)';
+            nc.addEventListener('blur',()=>{clData[item.origIdx].number=nc.textContent;clSaveData();});
+            row.appendChild(nc);
+            const ic=document.createElement('td'); ic.className='cl-editable'; ic.contentEditable=true; ic.textContent=item.item;
+            ic.addEventListener('blur',()=>{clData[item.origIdx].item=ic.textContent;clSaveData();}); row.appendChild(ic);
+            const pc=document.createElement('td'); pc.className='cl-editable'; pc.contentEditable=true; pc.textContent=item.problem;
+            pc.addEventListener('blur',()=>{clData[item.origIdx].problem=pc.textContent;clSaveData();}); row.appendChild(pc);
+            const sc=document.createElement('td'); sc.className='cl-editable'; sc.contentEditable=true; sc.textContent=item.solution;
+            sc.addEventListener('blur',()=>{clData[item.origIdx].solution=sc.textContent;clSaveData();}); row.appendChild(sc);
+            const stc=document.createElement('td');
+            stc.innerHTML=`<div class="cl-status-btns">
+                <button class="cl-status-btn not-started ${item.status==='not-started'?'active':''}" onclick="clUpdateStatus(${item.origIdx},'not-started')">미착수</button>
+                <button class="cl-status-btn in-progress ${item.status==='in-progress'?'active':''}" onclick="clUpdateStatus(${item.origIdx},'in-progress')">진행중</button>
+                <button class="cl-status-btn completed ${item.status==='completed'?'active':''}" onclick="clUpdateStatus(${item.origIdx},'completed')">완료</button>
+            </div>`; row.appendChild(stc);
+            const pgc=document.createElement('td');
+            pgc.innerHTML=`<div class="cl-progress-btns">
+                ${[0,25,50,75,100].map(v=>`<button class="cl-progress-btn ${item.progress===v?'active':''}" onclick="clUpdateProgress(${item.origIdx},${v})">${v}%</button>`).join('')}
+            </div>`; row.appendChild(pgc);
+            const dc=document.createElement('td');
+            dc.innerHTML=`<button class="cl-delete-btn" onclick="clDeleteItem(${item.origIdx})">삭제</button>`; row.appendChild(dc);
+            tbody.appendChild(row);
+        });
+    });
+}
+
+function clUpdateStatus(idx,status){clData[idx].status=status;clSaveData();clRenderChecklist();clUpdateSummary();}
+function clUpdateProgress(idx,progress){clData[idx].progress=progress;clSaveData();clRenderChecklist();}
+function clDeleteItem(idx){
+    if(confirm('이 항목을 삭제하시겠습니까?')){
+        clData.splice(idx,1); clSaveData(); clRenderChecklist(); clUpdateSummary();
+        clShowToast('🗑️ 항목이 삭제되었습니다');
+    }
+}
+
+function clUpdateSummary(){
+    const total=clData.length;
+    const ns=clData.filter(i=>i.status==='not-started').length;
+    const ip=clData.filter(i=>i.status==='in-progress').length;
+    const cp=clData.filter(i=>i.status==='completed').length;
+    const pct=total>0?Math.round(cp/total*100):0;
+    document.getElementById('clTotal').textContent=total;
+    document.getElementById('clNotStarted').textContent=ns;
+    document.getElementById('clInProgress').textContent=ip;
+    document.getElementById('clCompleted').textContent=cp;
+    const bar=document.getElementById('clOverallBar');
+    bar.style.width=pct+'%'; bar.textContent=pct+'%';
+    const cats={};
+    clData.forEach(item=>{
+        if(!cats[item.category]) cats[item.category]={total:0,ns:0,ip:0,cp:0};
+        cats[item.category].total++;
+        if(item.status==='not-started') cats[item.category].ns++;
+        if(item.status==='in-progress') cats[item.category].ip++;
+        if(item.status==='completed')   cats[item.category].cp++;
+    });
+    const cs=document.getElementById('clCatSummary'); cs.innerHTML='';
+    Object.keys(cats).forEach(cat=>{
+        const s=cats[cat], p=s.total>0?Math.round(s.cp/s.total*100):0;
+        const d=document.createElement('div'); d.className='cl-cat-item';
+        d.innerHTML=`<h4>${cat}</h4>
+            <div class="cl-cat-item-bar-wrap"><div class="cl-cat-item-bar" style="width:${p}%">${p}%</div></div>
+            <div class="cl-cat-stats">
+                <div class="cl-stat"><div class="cl-stat-value">${s.total}</div><div class="cl-stat-label">전체</div></div>
+                <div class="cl-stat"><div class="cl-stat-value" style="color:var(--cl-danger)">${s.ns}</div><div class="cl-stat-label">미착수</div></div>
+                <div class="cl-stat"><div class="cl-stat-value" style="color:var(--cl-warning)">${s.ip}</div><div class="cl-stat-label">진행중</div></div>
+                <div class="cl-stat"><div class="cl-stat-value" style="color:var(--cl-success)">${s.cp}</div><div class="cl-stat-label">완료</div></div>
+            </div>`;
+        cs.appendChild(d);
+    });
+}
+
+function clRenderReviews(){
+    const list=document.getElementById('clReviewList'); list.innerHTML='';
+    if(!clReviews.length){
+        list.innerHTML='<p style="text-align:center;color:var(--cl-gray-600);padding:40px">아직 검토 회의가 등록되지 않았습니다.</p>';
+        return;
+    }
+    clReviews.forEach((rev,idx)=>{
+        const d=document.createElement('div'); d.className='cl-review-item';
+        d.innerHTML=`<div class="cl-review-header">
+            <div class="cl-editable" style="font-size:1.2em;font-weight:600;color:var(--cl-gray-800);padding:0;min-height:auto;cursor:text;" contenteditable="true" onblur="clUpdateReview(${idx},'title',this.textContent)">${rev.title||''}</div>
+        </div>
+        <div class="cl-review-content">
+            ${[['datetime','일시'],['meetingName','회의명'],['participants','참석자'],['purpose','목적'],['notes','특이사항'],['content','회의내용']].map(([f,l])=>`
+            <div class="cl-review-field">
+                <label>${l}</label>
+                <div class="cl-editable" contenteditable="true" onblur="clUpdateReview(${idx},'${f}',this.textContent)">${rev[f]||''}</div>
+            </div>`).join('')}
+        </div>
+        <button class="cl-delete-btn" style="margin-top:12px" onclick="clDeleteReview(${idx})">🗑️ 삭제</button>`;
+        list.appendChild(d);
+    });
+}
+function clAddReview(){
+    clReviews.push({title:'',datetime:'',meetingName:'',participants:'',purpose:'',notes:'',content:''});
+    clSaveData(); clRenderReviews(); clShowToast('✅ 새 검토 회의가 추가되었습니다');
+}
+function clUpdateReview(idx,field,val){clReviews[idx][field]=val;clSaveDataSilent();}
+function clDeleteReview(idx){
+    if(confirm('이 검토 회의를 삭제하시겠습니까?')){
+        clReviews.splice(idx,1); clSaveData(); clRenderReviews();
+    }
+}
+
+function clExportExcel(){
+    const rows=clData.map(i=>({'카테고리':i.category,'번호':i.number,'항목':i.item,'문제점/검토사항':i.problem,'논의 내용':i.solution,'비고':i.note,'상태':i.status==='not-started'?'미착수':i.status==='in-progress'?'진행중':'완료','진행률':i.progress+'%'}));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'체크리스트');
+    if(clReviews.length){
+        const rr=clReviews.map(r=>({'제목':r.title||'','일시':r.datetime||'','회의명':r.meetingName||'','참석자':r.participants||'','목적':r.purpose||'','특이사항':r.notes||'','회의내용':r.content||''}));
+        XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rr),'검토 회의');
+    }
+    scData.forEach((block, idx)=>{
+        const sheetRows = [{'구분': '◆ ' + block.title, '주요내용': '', '진행 계획': ''},...block.rows.map(r=>({'구분':r.c0||'','주요내용':r.c1||'','진행 계획':r.c2||''}))];
+        const rawName = block.title.replace(/[:\\\/?*\[\]]/g,'').substring(0,28);
+        const sheetName = rawName || ('일정_'+(idx+1));
+        const ws = XLSX.utils.json_to_sheet(sheetRows);
+        ws['!cols'] = [{wch:35},{wch:50},{wch:20}];
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
+    XLSX.writeFile(wb,`AMR_통합_${new Date().toISOString().split('T')[0]}.xlsx`);
+    clShowToast('💾 엑셀 내보내기 완료');
+}
+function clImportExcel(){ document.getElementById('clImportFile').click(); }
+function clHandleImport(e){
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=function(ev){
+        try{
+            const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+            const SKIP_SHEETS = new Set(['체크리스트','검토 회의']);
+            const ws=wb.Sheets['체크리스트'];
+            if(ws&&confirm('체크리스트 데이터를 가져오시겠습니까?')){
+                clData=XLSX.utils.sheet_to_json(ws).map(r=>({
+                    category:r['카테고리'],number:r['번호'],item:r['항목'],
+                    problem:r['문제점/검토사항'],solution:r['논의 내용']||r['해결방안'],note:r['비고']||'',
+                    status:r['상태']==='미착수'?'not-started':r['상태']==='진행중'?'in-progress':'completed',
+                    progress:parseInt(r['진행률'])||0
+                }));
+                clSaveData(); clRenderChecklist(); clUpdateSummary();
+                clShowToast('✅ 체크리스트를 가져왔습니다');
+            }
+            const scSheets=wb.SheetNames.filter(n=>!SKIP_SHEETS.has(n));
+            if(scSheets.length){
+                if(confirm('주요 일정표 시트 '+scSheets.length+'개를 가져오시겠습니까?')){
+                    scSheets.forEach(sheetName=>{
+                        const wssc=wb.Sheets[sheetName];
+                        const jsonRows=XLSX.utils.sheet_to_json(wssc,{header:1,defval:''});
+                        if(!jsonRows.length) return;
+                        let title=sheetName, dataStartRow=1;
+                        const firstCell=String(jsonRows[0][0]||'');
+                        if(firstCell.startsWith('◆ ')){ title=firstCell.replace(/^◆\s*/,'').trim(); dataStartRow=2; }
+                        const rows=jsonRows.slice(dataStartRow).filter(r=>r.some(c=>String(c||'').trim())).map(r=>({c0:String(r[0]||'').trim(),c1:String(r[1]||'').trim(),c2:String(r[2]||'').trim()}));
+                        const existing=scData.findIndex(b=>b.title===title);
+                        if(existing>=0){ scData[existing].rows=rows.length?rows:[{c0:'',c1:'',c2:''}]; }
+                        else { scData.push({id:'sc_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),title,rows:rows.length?rows:[{c0:'',c1:'',c2:''}]}); }
+                    });
+                    scSave();
+                    if(document.getElementById('cl-tab-schedule').classList.contains('active')) scRender();
+                    clShowToast('✅ 일정표를 가져왔습니다');
+                }
+            }
+        }catch(err){alert('파일 오류: '+err.message);}
+    };
+    reader.readAsArrayBuffer(file); e.target.value='';
+}
+
+function clBackupMenu(){
+    const choice = confirm('로컬 백업 메뉴\n\n[확인] JSON 파일로 백업\n[취소] JSON 파일에서 복원');
+    if(choice) clBackupExport();
+    else clBackupImport();
+}
+
+function clBackupExport(){
+    tlEditorCollect();
+    const backup = { version: '1.0', exportDate: new Date().toISOString(), checklist: clData, reviews: clReviews, schedule: scData, timetable: tlGroups };
+    const dataStr = JSON.stringify(backup, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url; link.download = `AMR_로컬백업_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+    clShowToast('💾 JSON 파일로 백업 완료');
+}
+
+function clBackupImport(){ document.getElementById('clBackupFile').click(); }
+
+function clHandleBackupImport(e){
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+        try{
+            const backup = JSON.parse(ev.target.result);
+            if(!backup.checklist || !backup.reviews){ alert('❌ 잘못된 백업 파일입니다.'); return; }
+            if(!confirm(`📅 ${backup.exportDate.split('T')[0]} 백업본을 복원하시겠습니까?`)) return;
+            clData = backup.checklist; clReviews = backup.reviews;
+            if(backup.schedule){ scData = backup.schedule; scSave(); }
+            if(backup.timetable){
+                backup.timetable.forEach(sg=>{
+                    const gi=tlGroups.findIndex(g=>g.id===sg.id); if(gi<0) return;
+                    tlGroups[gi].items = sg.items || tlGroups[gi].items;
+                });
+                const snapshot=tlGroups.map(g=>({id:g.id,items:g.items.map(item=>{const base={no:item.no,name:item.name};if(item.segments){base.segments=item.segments.map(s=>({...s}));}else{base.sw=item.sw;base.ew=item.ew;}return base;})}));
+                localStorage.setItem('amrTlGroups', JSON.stringify(snapshot));
+                document.getElementById('tlEditorGroups').innerHTML='';
+                tlRenderEditor(); tlRenderTimeline(); tlRenderCategories();
+            }
+            clSaveData(); clRenderChecklist(); clUpdateSummary();
+            clShowToast('✅ JSON 파일에서 복원 완료');
+        }catch(err){ alert('❌ 파일 오류: '+err.message); }
+    };
+    reader.readAsText(file); e.target.value='';
+}
+
+function clOpenModal(){
+    document.getElementById('clItemForm').reset();
+    document.getElementById('clCustomCatGroup').style.display='none';
+    document.getElementById('clModal').classList.add('active');
+}
+function clCloseModal(){ document.getElementById('clModal').classList.remove('active'); }
+document.getElementById('clItemCategory').addEventListener('change',function(){
+    const cg=document.getElementById('clCustomCatGroup');
+    if(this.value==='custom'){cg.style.display='block';}
+    else{cg.style.display='none';}
+});
+document.getElementById('clItemForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    let cat=document.getElementById('clItemCategory').value;
+    if(cat==='custom') cat=document.getElementById('clCustomCat').value;
+    const catItems=clData.filter(i=>i.category===cat);
+    const last=catItems.length>0?Math.max(...catItems.map(i=>parseInt(i.number.split('-')[1])||0)):0;
+    const allCats=[...new Set(clData.map(i=>i.category))];
+    let cn=allCats.indexOf(cat)+1; if(cn===0) cn=allCats.length+1;
+    clData.push({
+        category:cat, number:`${cn}-${last+1}`,
+        item:document.getElementById('clItemName').value,
+        problem:document.getElementById('clItemProblem').value,
+        solution:document.getElementById('clItemSolution').value,
+        note:'', status:document.getElementById('clItemStatus').value,
+        progress:parseInt(document.getElementById('clItemProgress').value)
+    });
+    clSaveData(); clRenderChecklist(); clUpdateSummary(); clCloseModal();
+    clShowToast('✅ 항목이 추가되었습니다');
+});
+
+/* ════════════════════════════════════════
+   SCHEDULE TABLE JS
+════════════════════════════════════════ */
+const SC_INITIAL = [
+    {id:"sc_1",title:"자율이동로봇 주요 일정표 (2월4주차~3월1주차)",rows:[{c0:"자율 주행 로봇 도입 업체 사전 미팅",c1:"시스템 인터페이스 및 개발 일정 협의\n(유유,액스비스,두산솔루션)",c2:"2월26일(목) 진행 완료"},{c0:"CSV 문서 착수",c1:"URS 초안 자료작성",c2:"작성완료"},{c0:"견적서 검토",c1:"업체 비교견적서 검토",c2:"검토완료"}]},
+    {id:"sc_2",title:"자율이동로봇 주요 일정표 (3월2주차~3월3주차)",rows:[{c0:"CSV 문서 착수",c1:"URS 자료작성 및 승인",c2:"3월 4주차 승인 완료"},{c0:"기안서 작성",c1:"기안서 상신",c2:"3월 3주차 기안 승인 완료"},{c0:"표준 계약서 ",c1:"업체별 표준 계약서 작성 및 검토",c2:"3월 4주차 계약 완료"}]},
+    {id:"sc_1776153001952",title:"자율이동로봇 주요 일정표 (4월1주차~4월2주차)",rows:[{c0:"AMR도입 KICK-OFF 회의",c1:"AMR도입 상황 설명, 문제점 질의 및 해결 방안 논의",c2:"4월 10일(금) 진행 완료"},{c0:"",c1:"",c2:""}]},
+];
+
+function scSave(){
+    localStorage.setItem('amrSchedule', JSON.stringify(scData));
+    saveToSheets({ schedule: scData });
+}
+function scIdx(id){ return scData.findIndex(b=>b.id===id); }
+function scEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function scRender(){
+    const list = document.getElementById('scList');
+    list.innerHTML = '';
+    if(!scData.length){ list.innerHTML='<div class="sc-empty">📋 등록된 일정표가 없습니다.</div>'; return; }
+    scData.forEach(block => list.appendChild(scBuildBlock(block)));
+}
+
+function scBuildBlock(block){
+    const div = document.createElement('div');
+    div.className = 'sc-block'; div.id = 'scBlock_' + block.id;
+    div.innerHTML = `
+    <div class="sc-block-head">
+        <div class="sc-block-title-area">
+            <span class="sc-block-icon">📆</span>
+            <input class="sc-title-input" type="text" value="${scEsc(block.title)}"
+                onblur="scUpdateTitle('${block.id}',this.value)"
+                onkeydown="if(event.key==='Enter')this.blur()" />
+        </div>
+        <div class="sc-head-btns">
+            <button class="sc-hbtn" onclick="scAddRow('${block.id}')">＋ 행 추가</button>
+            <button class="sc-hbtn del" onclick="scDelBlock('${block.id}')">🗑 삭제</button>
+        </div>
+    </div>
+    <div class="sc-tbl-wrap">
+        <table class="sc-tbl">
+            <thead><tr><th>구분</th><th>주요내용</th><th>진행 계획</th><th></th></tr></thead>
+            <tbody id="scTbody_${block.id}"></tbody>
+        </table>
+        <button class="sc-add-row-btn" onclick="scAddRow('${block.id}')">＋ 행 추가</button>
+    </div>`;
+    const tbody = div.querySelector('#scTbody_' + block.id);
+    block.rows.forEach((row, ri) => tbody.appendChild(scBuildRow(block.id, ri, row)));
+    return div;
+}
+
+function scBuildRow(blockId, ri, row){
+    const tr = document.createElement('tr');
+    ['c0','c1','c2'].forEach(col => {
+        const td = document.createElement('td');
+        const cell = document.createElement('div');
+        cell.className = 'sc-cell'; cell.contentEditable = 'true'; cell.textContent = row[col] || '';
+        cell.addEventListener('blur', function(){
+            const bi = scIdx(blockId); if(bi<0) return;
+            scData[bi].rows[ri][col] = this.textContent; scSave();
+        });
+        cell.addEventListener('keydown', function(e){
+            if(e.key==='Enter'){ e.preventDefault(); this.blur(); }
+            if(e.key==='Tab'){ e.preventDefault(); const cells=Array.from(tr.querySelectorAll('.sc-cell')); const i=cells.indexOf(this); if(i<cells.length-1) cells[i+1].focus(); }
+        });
+        td.appendChild(cell); tr.appendChild(td);
+    });
+    const dtd = document.createElement('td');
+    const dbtn = document.createElement('button');
+    dbtn.className = 'sc-del-row'; dbtn.title = '행 삭제'; dbtn.textContent = '×';
+    dbtn.onclick = () => scDelRow(blockId, ri);
+    dtd.appendChild(dbtn); tr.appendChild(dtd);
+    return tr;
+}
+
+function scUpdateTitle(id, val){ const bi=scIdx(id); if(bi<0) return; scData[bi].title=val; scSave(); }
+function scAddRow(id){
+    const bi=scIdx(id); if(bi<0) return;
+    const newRow={c0:'',c1:'',c2:''}; scData[bi].rows.push(newRow); scSave();
+    const tbody=document.getElementById('scTbody_'+id);
+    if(!tbody){ scRender(); return; }
+    const ri=scData[bi].rows.length-1;
+    const tr=scBuildRow(id, ri, newRow); tbody.appendChild(tr);
+    setTimeout(()=>tr.querySelector('.sc-cell').focus(), 50);
+}
+function scDelRow(id, ri){
+    const bi=scIdx(id); if(bi<0) return;
+    if(scData[bi].rows.length<=1&&!confirm('마지막 행입니다. 삭제하시겠습니까?')) return;
+    scData[bi].rows.splice(ri,1); scSave(); scRender();
+}
+function scDelBlock(id){
+    if(!confirm('이 일정표를 삭제하시겠습니까?')) return;
+    scData=scData.filter(b=>b.id!==id); scSave(); scRender();
+    clShowToast('🗑 일정표가 삭제되었습니다');
+}
+function scAddBlock(){
+    let title='자율이동로봇 주요 일정표 (주차 직접 입력)';
+    if(scData.length){
+        const last=scData[scData.length-1].title;
+        const m=last.match(/(\d+)월(\d+)주차[^\d]*$/);
+        if(m){ let mo=+m[1],wk=+m[2]; wk+=2; if(wk>4){wk-=4;mo++;} if(mo>12)mo=1; let mo2=mo,wk2=wk+1; if(wk2>4){wk2-=4;mo2++;} if(mo2>12)mo2=1; title=`자율이동로봇 주요 일정표 (${mo}월${wk}주차~${mo2}월${wk2}주차)`; }
+    }
+    const block={id:'sc_'+Date.now(),title,rows:[{c0:'',c1:'',c2:''},{c0:'',c1:'',c2:''}]};
+    scData.push(block); scSave();
+    const list=document.getElementById('scList');
+    const empty=list.querySelector('.sc-empty'); if(empty) empty.remove();
+    const el=scBuildBlock(block); list.appendChild(el);
+    clShowToast('✅ 새 일정표가 추가되었습니다');
+    setTimeout(()=>{ el.scrollIntoView({behavior:'smooth',block:'start'}); }, 80);
+}
+
+function clShowToast(msg){
+    const t=document.createElement('div'); t.className='cl-toast'; t.textContent=msg;
+    document.body.appendChild(t);
+    setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.3s';setTimeout(()=>document.body.removeChild(t),300);},2000);
+}
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+window.addEventListener('load',()=>{
+    tlLoadEditorData();
+    tlRenderHeader();
+    tlRenderTimeline();
+    tlRenderCategories();
+    tlRenderHistory();
+    clLoadData();
+    clRenderChecklist();
+    clUpdateSummary();
+
+    /* Google Sheets 동기화 초기화 */
+    setTimeout(() => syncFromSheets(true), 1000);   // 첫 로드 후 1초 뒤 Sheets 데이터 가져오기
+    setInterval(() => syncFromSheets(true), 30000); // 30초마다 자동 갱신
+});
+</script>
+</body>
+</html>
