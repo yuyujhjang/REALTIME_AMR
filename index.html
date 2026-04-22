@@ -1923,7 +1923,7 @@ window.addEventListener('load',()=>{
 
     /* Google Sheets 동기화 초기화 */
     setTimeout(() => syncFromSheets(true), 1000);   // 첫 로드 후 1초 뒤 Sheets 데이터 가져오기
-    setInterval(() => syncFromSheets(true), 30000); // 30초마다 자동 갱신
+    setInterval(() => syncFromSheets(true), 5000); // 5초마다 자동 갱신
 });
 </script>
 </body>
